@@ -29,6 +29,8 @@ export interface LumenBrowserApi {
   exportHtml: () => Promise<string>;
   /** HTML paginado (una diapositiva por página) listo para imprimir/convertir a PDF. */
   printHtml: () => string;
+  /** Genera el .pptx como Blob (PowerPoint/Keynote/Google Slides). */
+  exportPptx: () => Promise<Blob>;
   on: (event: 'change', cb: (doc: unknown) => void) => () => void;
 }
 
@@ -59,6 +61,7 @@ export function installBridge() {
     stopPresenting: () => useEditor.setState({ presenting: null }),
     exportHtml: () => buildStandaloneHtml(useEditor.getState().doc),
     printHtml: () => buildPrintHtml(useEditor.getState().doc),
+    exportPptx: async () => (await import('../../render/exportPptx')).buildPptx(useEditor.getState().doc),
     on: (_event, cb) => useEditor.subscribe((s, p) => s.doc !== p.doc && cb(s.doc)),
   };
   window.lumen = api;

@@ -34,6 +34,7 @@ import {
   Printer,
   Keyboard,
   Table2,
+  Presentation,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -42,6 +43,7 @@ import {
   exportHtml,
   exportJson,
   exportPdf,
+  exportPptx,
   importJson,
   insertElement,
   insertGlassCard,
@@ -382,6 +384,7 @@ export function TopBar() {
               onDone={close}
               items={[
                 { label: 'HTML autónomo (.html)', icon: <FileCode2 size={14} />, kbd: '⌘E', onSelect: exportHtml },
+                { label: 'PowerPoint (.pptx)', icon: <Presentation size={14} />, onSelect: exportPptx },
                 { label: 'PDF (imprimir)', icon: <Printer size={14} />, kbd: '⌘P', onSelect: exportPdf },
                 { label: 'Documento Lumen (.json)', icon: <FileJson size={14} />, onSelect: exportJson },
                 'sep',

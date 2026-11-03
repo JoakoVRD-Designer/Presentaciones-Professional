@@ -214,6 +214,21 @@ export async function exportHtml() {
   }
 }
 
+export async function exportPptx() {
+  const s = st();
+  try {
+    s.toast('Generando PowerPoint… (los fondos animados se convierten en imagen)');
+    const { buildPptx } = await import('../../render/exportPptx');
+    const blob = await buildPptx(s.doc);
+    downloadFile(`${slugify(s.doc.title)}.pptx`, blob);
+    sfx('success');
+    s.toast('PowerPoint exportado: texto, formas, tablas y gráficos son editables.', 'success');
+  } catch (err) {
+    console.error(err);
+    s.toast(err instanceof Error ? `No se pudo exportar: ${err.message}` : 'Error al exportar', 'error');
+  }
+}
+
 export async function exportPdf() {
   const s = st();
   try {
