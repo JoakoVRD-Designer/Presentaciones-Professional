@@ -82,6 +82,7 @@ export const TRANSITION_LABELS: Record<string, string> = {
   wipe: 'Barrido',
   circle: 'Círculo',
   dissolve: 'Disolver',
+  morph: 'Morph ✦',
 };
 
 export const SOUND_LABELS: Record<string, string> = {

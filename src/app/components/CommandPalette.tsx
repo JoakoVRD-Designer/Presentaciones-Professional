@@ -31,6 +31,7 @@ import { THEMES } from '../../core/themes';
 import {
   addSlide,
   deleteSlide,
+  duplicateForMorph,
   duplicateSlide,
   exportHtml,
   exportJson,
@@ -116,6 +117,7 @@ export function CommandPalette() {
                     <Item key={l.id} icon={<LayoutTemplate size={15} />} label={`Nueva: ${l.name}`} onSelect={() => addSlide(l.id)} keywords={[l.description]} />
                   ))}
                   <Item icon={<Copy size={15} />} label="Duplicar diapositiva" onSelect={duplicateSlide} />
+                  <Item icon={<Wand2 size={15} />} label="Duplicar con Morph (Magic Move)" onSelect={duplicateForMorph} keywords={['morph', 'magic move', 'animar']} />
                   <Item icon={<Trash2 size={15} />} label="Eliminar diapositiva" onSelect={deleteSlide} />
                 </Command.Group>
                 <Command.Group heading="Insertar">

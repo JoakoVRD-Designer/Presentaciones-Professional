@@ -170,6 +170,17 @@ export function duplicateSlide() {
   sfx('pop');
 }
 
+/** Flujo tipo Keynote/PowerPoint: duplica la diapositiva con transición Morph para mover cosas y animarlas. */
+export function duplicateForMorph() {
+  const s = st();
+  const [res] = s.dispatch([{ op: 'slide.duplicate', slide: s.currentSlideId }]);
+  if (!res?.id) return;
+  s.dispatch([{ op: 'slide.transition', slide: res.id, transition: { type: 'morph', duration: 1000 } }], { history: true });
+  s.selectSlide(res.id);
+  sfx('success');
+  s.toast('Diapositiva duplicada con Morph: mueve, redimensiona o cambia elementos y se animarán solos.', 'success');
+}
+
 export function deleteSlide() {
   const s = st();
   if (!s.currentSlideId) return;

@@ -275,6 +275,83 @@ export function createPlayer(root, options) {
     list.forEach((a) => a.classList.toggle('lm-in', (Number(a.dataset.step) || 0) <= s));
   }
 
+  /* ---- Morph (Magic Move) ---- */
+  const MORPH_EASE = 'cubic-bezier(0.65, 0, 0.35, 1)';
+
+  function geom(elNode) {
+    const st = elNode.style;
+    const rot = /rotate\(([-\d.]+)deg\)/.exec(st.transform || '');
+    const body = elNode.querySelector('.lm-body');
+    const text = elNode.querySelector('.lm-text');
+    return {
+      left: parseFloat(st.left) || 0,
+      top: parseFloat(st.top) || 0,
+      width: parseFloat(st.width) || 0,
+      height: parseFloat(st.height) || 0,
+      rotate: rot ? parseFloat(rot[1]) : 0,
+      opacity: body ? parseFloat(body.style.opacity || '1') : 1,
+      fontSize: text ? parseFloat(text.style.fontSize) || 0 : 0,
+    };
+  }
+
+  function clearMorph(frame) {
+    frame.querySelectorAll('.lm-morphed').forEach((n) => n.classList.remove('lm-morphed'));
+    frame.querySelectorAll('.lm-morph-hide').forEach((n) => n.classList.remove('lm-morph-hide'));
+  }
+
+  /** Anima los elementos emparejados (misma clave o mismo nombre) entre dos diapositivas. */
+  function morph(prevFrame, nextFrame, dur) {
+    const prevEls = Array.prototype.slice.call(prevFrame.querySelectorAll('.lm-el'));
+    const byKey = new Map();
+    const byName = new Map();
+    prevEls.forEach((n) => {
+      if (!byKey.has(n.dataset.morph)) byKey.set(n.dataset.morph, n);
+      if (n.dataset.name && !byName.has(n.dataset.name)) byName.set(n.dataset.name, n);
+    });
+    const used = new Set();
+    const anims = [];
+    nextFrame.querySelectorAll('.lm-el').forEach((b) => {
+      if (Number(b.dataset.step) > 0) return;
+      let a = byKey.get(b.dataset.morph);
+      if ((!a || used.has(a)) && b.dataset.name) a = byName.get(b.dataset.name);
+      if (!a || used.has(a)) {
+        // Elemento nuevo: aparece con fundido si no tiene su propia entrada.
+        const anim = b.querySelector('.lm-anim');
+        if (anim && anim.dataset.entrance === 'none') {
+          anims.push(b.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: MORPH_EASE }));
+        }
+        return;
+      }
+      used.add(a);
+      const ga = geom(a);
+      const gb = geom(b);
+      a.classList.add('lm-morph-hide');
+      const anim = b.querySelector('.lm-anim');
+      if (anim) anim.classList.add('lm-morphed');
+      anims.push(
+        b.animate(
+          [
+            { left: ga.left + 'px', top: ga.top + 'px', width: ga.width + 'px', height: ga.height + 'px', transform: 'rotate(' + ga.rotate + 'deg)' },
+            { left: gb.left + 'px', top: gb.top + 'px', width: gb.width + 'px', height: gb.height + 'px', transform: 'rotate(' + gb.rotate + 'deg)' },
+          ],
+          { duration: dur, easing: MORPH_EASE },
+        ),
+      );
+      const body = b.querySelector('.lm-body');
+      if (body && ga.opacity !== gb.opacity) {
+        anims.push(body.animate([{ opacity: ga.opacity }, { opacity: gb.opacity }], { duration: dur, easing: MORPH_EASE }));
+      }
+      const text = b.querySelector('.lm-text');
+      if (text && ga.fontSize && gb.fontSize && ga.fontSize !== gb.fontSize) {
+        anims.push(text.animate([{ fontSize: ga.fontSize + 'px' }, { fontSize: gb.fontSize + 'px' }], { duration: dur, easing: MORPH_EASE }));
+      }
+    });
+    // El fondo nuevo se funde sobre el anterior.
+    const bg = nextFrame.querySelector('.lm-bg');
+    if (bg) anims.push(bg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: MORPH_EASE }));
+    return anims;
+  }
+
   /* ---- Medios ---- */
   function media(frame, play) {
     frame.querySelectorAll('video').forEach((v) => {
@@ -333,9 +410,11 @@ export function createPlayer(root, options) {
     allFrames.forEach((f) => {
       if (f !== prevFrame && f !== nextFrame) {
         f.classList.remove('is-current', 'is-enter', 'is-leave');
+        clearMorph(f);
         media(f, false);
       }
     });
+    clearMorph(nextFrame);
 
     stage.style.setProperty('--dir', String(dir));
     stage.style.setProperty('--o-in', dir > 0 ? '0% 50%' : '100% 50%');
@@ -369,6 +448,11 @@ export function createPlayer(root, options) {
       }
     }
     leaveTimers.push(setTimeout(() => nextFrame.classList.remove('is-enter'), dur + 30));
+
+    if (type === 'morph' && prevFrame && prevFrame !== nextFrame && typeof nextFrame.animate === 'function') {
+      morph(prevFrame, nextFrame, dur);
+      leaveTimers.push(setTimeout(() => clearMorph(prevFrame), dur + 40));
+    }
 
     index = i;
     step = dir < 0 && !(opt && opt.fromStart) ? maxStep(nextFrame) : 0;

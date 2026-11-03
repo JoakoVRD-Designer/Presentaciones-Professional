@@ -232,7 +232,8 @@ function cloneSlideWithNewIds(slide: Slide): Slide {
   return {
     ...clone(slide),
     id: uid('sl'),
-    elements: slide.elements.map((e) => ({ ...clone(e), id: uid('el') })),
+    // La copia queda enlazada al original para la transición Morph.
+    elements: slide.elements.map((e) => ({ ...clone(e), id: uid('el'), morph: e.morph || e.id })),
   };
 }
 
@@ -363,7 +364,7 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
     case 'element.duplicate': {
       const { slide, index } = findElement(draft, cmd.element, cmd.slide);
       const src = slide.elements[index] as SlideElement;
-      const copy = { ...clone(src), id: uid('el'), x: src.x + cmd.offset, y: src.y + cmd.offset };
+      const copy = { ...clone(src), id: uid('el'), morph: '', x: src.x + cmd.offset, y: src.y + cmd.offset };
       slide.elements.splice(index + 1, 0, copy as Draft<SlideElement>);
       return copy.id;
     }
@@ -533,6 +534,8 @@ Cada comando devuelve { ok, op, id, error }. Si uno falla los demás continúan.
 ## Consejos de diseño
 - Una idea por diapositiva. Títulos de 3-8 palabras. Máx. 6 viñetas.
 - Usa "step" en animation para revelar contenido con clics (builds).
+- Morph (Magic Move): slide.duplicate y luego mueve/redimensiona elementos de la copia y pon
+  slide.transition { type: "morph" }; los elementos enlazados se animan solos entre diapositivas.
 - Fondos: "effect" (aurora, mesh, grid, dots, stars, spotlight, beams, waves, noise),
   "video" con blur 4-10 + overlay oscuro para legibilidad, "image" con kenBurns.
 - Vidrio (glassmorphism): style { fill: "rgba(255,255,255,0.08)", backdropBlur: 24,

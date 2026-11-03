@@ -117,6 +117,12 @@
 @keyframes lm-t-dissolve-in { from { opacity: 0; filter: blur(12px) saturate(0.4) brightness(1.4); transform: scale(1.04); } to { opacity: 1; filter: none; transform: none; } }
 @keyframes lm-t-dissolve-out { from { opacity: 1; filter: none; } to { opacity: 0; filter: blur(8px) brightness(0.6); } }
 
+/* morph (Magic Move): la diapositiva nueva queda encima y sus elementos se interpolan */
+.lm-frame.is-enter[data-t='morph'] { animation-name: lm-t-hold; }
+.lm-frame.is-leave[data-t='morph'] { animation-name: lm-t-fade-out; }
+.lm-morph-hide { visibility: hidden !important; }
+.lm-anim.lm-morphed { animation: none !important; opacity: 1 !important; }
+
 /* ---------- Interfaz del reproductor ---------- */
 .lm-ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
 .lm-ui > * { pointer-events: auto; }

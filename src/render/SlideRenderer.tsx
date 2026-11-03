@@ -357,6 +357,9 @@ function ElementView(props: {
       className={`lm-el lm-el-${el.type}${el.hidden ? ' lm-hidden' : ''}`}
       data-id={el.id}
       data-link={el.link || undefined}
+      data-morph={el.morph || el.id}
+      data-name={el.name ? `${el.type}:${el.name}` : undefined}
+      data-step={el.animation.step || undefined}
       style={{
         left: el.x,
         top: el.y,

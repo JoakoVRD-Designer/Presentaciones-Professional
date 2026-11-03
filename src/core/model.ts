@@ -67,6 +67,7 @@ export const TRANSITIONS = [
   'wipe',
   'circle',
   'dissolve',
+  'morph',
 ] as const;
 
 export const SOUNDS = ['none', 'whoosh', 'swoosh', 'pop', 'chime', 'click', 'soft', 'rise'] as const;
@@ -192,6 +193,13 @@ const baseFields = {
   locked: z.boolean().default(false),
   hidden: z.boolean().default(false),
   link: z.string().default('').describe('URL externa o "#3" para saltar a la diapositiva 3 al hacer clic.'),
+  morph: z
+    .string()
+    .default('')
+    .describe(
+      'Clave Morph: con la transición "morph", los elementos con la misma clave (o el mismo nombre) en diapositivas consecutivas se animan de una posición/tamaño a otra. Al duplicar una diapositiva se enlaza solo.',
+    ),
+  group: z.string().default('').describe('Id de grupo: los elementos con el mismo grupo se seleccionan y mueven juntos.'),
   style: StyleSchema.prefault({}),
   animation: AnimationSchema.prefault({}),
 };

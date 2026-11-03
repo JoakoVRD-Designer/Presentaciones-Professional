@@ -1,5 +1,6 @@
 import { motion, Reorder } from 'framer-motion';
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Plus, Trash2, Wand2 } from 'lucide-react';
+import { duplicateForMorph } from '../lib/actions';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLayout, LAYOUTS } from '../../core/layouts';
 import { makeSlide, type Slide, type Theme } from '../../core/model';
@@ -94,6 +95,7 @@ export function SlideRail() {
           if (r?.id) useEditor.getState().selectSlide(r.id);
         },
       },
+      { label: 'Duplicar con Morph', icon: <Wand2 size={14} />, onSelect: duplicateForMorph },
       {
         label: slide.hidden ? 'Mostrar en presentación' : 'Ocultar en presentación',
         icon: slide.hidden ? <Eye size={14} /> : <EyeOff size={14} />,
