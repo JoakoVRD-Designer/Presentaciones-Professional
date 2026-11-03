@@ -171,11 +171,11 @@ app.post(
     const name = `${hash}.${ext}`;
     const file = path.join(ASSETS_DIR, name);
     if (!existsSync(file)) await fs.writeFile(file, body);
-    res.status(201).json({ url: `/assets/${name}`, type, size: body.length });
+    res.status(201).json({ url: `/media/${name}`, type, size: body.length });
   }),
 );
 app.use(
-  '/assets',
+  '/media',
   express.static(ASSETS_DIR, {
     maxAge: '30d',
     immutable: true,
@@ -232,7 +232,7 @@ app.post('/api/ai/chat', async (req, res) => {
 const DIST = path.resolve(process.cwd(), 'dist');
 if (existsSync(DIST)) {
   app.use(express.static(DIST, { index: false, maxAge: '1h' }));
-  app.get(/^\/(?!api|assets).*/, (_req, res) => res.sendFile(path.join(DIST, 'index.html')));
+  app.get(/^\/(?!api|media).*/, (_req, res) => res.sendFile(path.join(DIST, 'index.html')));
 }
 
 /* ---------- Errores ---------- */

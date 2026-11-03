@@ -161,6 +161,9 @@ export interface CommandResult {
 /* Utilidades                                                          */
 /* ------------------------------------------------------------------ */
 
+/** Copia profunda segura también para borradores de immer (structuredClone no los admite). */
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -219,9 +222,9 @@ function validateElement(el: unknown): SlideElement {
 
 function cloneSlideWithNewIds(slide: Slide): Slide {
   return {
-    ...structuredClone(slide),
+    ...clone(slide),
     id: uid('sl'),
-    elements: slide.elements.map((e) => ({ ...structuredClone(e), id: uid('el') })),
+    elements: slide.elements.map((e) => ({ ...clone(e), id: uid('el') })),
   };
 }
 
@@ -253,7 +256,7 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
       if (cmd.preset) {
         const preset = getTheme(cmd.preset);
         if (!preset) throw new Error(`Tema desconocido "${cmd.preset}". Disponibles: ${THEMES.map((t) => t.id).join(', ')}`);
-        theme = structuredClone(preset);
+        theme = clone(preset);
       }
       if (cmd.patch) theme = deepMerge(theme, cmd.patch);
       draft.theme = ThemeSchema.parse(theme);
@@ -352,7 +355,7 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
     case 'element.duplicate': {
       const { slide, index } = findElement(draft, cmd.element, cmd.slide);
       const src = slide.elements[index] as SlideElement;
-      const copy = { ...structuredClone(src), id: uid('el'), x: src.x + cmd.offset, y: src.y + cmd.offset };
+      const copy = { ...clone(src), id: uid('el'), x: src.x + cmd.offset, y: src.y + cmd.offset };
       slide.elements.splice(index + 1, 0, copy as Draft<SlideElement>);
       return copy.id;
     }

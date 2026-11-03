@@ -22,11 +22,11 @@ async function toDataUrl(url: string): Promise<string> {
   });
 }
 
-/** Sustituye recursos locales (/assets, blob:) por data: URIs para que el HTML sea autónomo. */
+/** Sustituye recursos locales (/media, blob:) por data: URIs para que el HTML sea autónomo. */
 async function inlineLocalAssets(doc: Presentation, embedRemote: boolean): Promise<Presentation> {
   const urls = new Set<string>();
   const json = JSON.stringify(doc);
-  const re = /"((?:\/assets\/|blob:)[^"]+|https?:\/\/[^"]+\.(?:png|jpe?g|webp|gif|svg|avif)(?:\?[^"]*)?)"/g;
+  const re = /"((?:\/media\/|blob:)[^"]+|https?:\/\/[^"]+\.(?:png|jpe?g|webp|gif|svg|avif)(?:\?[^"]*)?)"/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(json))) {
     if (m[1].startsWith('http') && !embedRemote) continue;

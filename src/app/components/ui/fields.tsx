@@ -3,7 +3,6 @@ import { ChevronDown, Pipette } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GRADIENT_PRESETS } from '../../../core/themes';
 import { sfx } from '../../lib/sound';
-import { useEditor } from '../../store/editor';
 import { Popover } from './Popover';
 
 /* ---------------- Sección plegable ---------------- */
@@ -387,14 +386,14 @@ export function ColorInput({
   emptyLabel?: string;
   placeholder?: string;
 }) {
-  const theme = useEditor((s) => s.doc.theme);
+  // Los colores del tema se guardan como variables CSS para que sigan al tema.
   const swatches = [
-    theme.colors.text,
-    theme.colors.muted,
-    theme.colors.primary,
-    theme.colors.accent,
-    theme.colors.background,
-    theme.colors.surface,
+    'var(--lm-text)',
+    'var(--lm-muted)',
+    'var(--lm-primary)',
+    'var(--lm-accent)',
+    'var(--lm-bg)',
+    'var(--lm-surface)',
     '#ffffff',
     '#000000',
     'rgba(255,255,255,0.08)',
@@ -441,7 +440,7 @@ export function ColorInput({
             <Swatch value="transparent" />
           </button>
           {swatches.map((c, i) => (
-            <button key={i} className="swatch-btn" onClick={() => onChange(c)} data-tip={c}>
+            <button key={i} className="swatch-btn" onClick={() => onChange(c)} data-tip={c.startsWith('var(') ? `Tema: ${c.slice(9, -1)}` : c}>
               <Swatch value={c} />
             </button>
           ))}
@@ -451,7 +450,8 @@ export function ColorInput({
             <div className="pop-label">Degradados</div>
             <div className="swatch-grid gradients">
               {[
-                `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.accent} 100%)`,
+                'linear-gradient(135deg, var(--lm-primary) 0%, var(--lm-accent) 100%)',
+                'linear-gradient(180deg, var(--lm-text) 30%, var(--lm-primary) 100%)',
                 ...GRADIENT_PRESETS,
               ].map((g) => (
                 <button key={g} className="swatch-btn" onClick={() => onChange(g)}>
