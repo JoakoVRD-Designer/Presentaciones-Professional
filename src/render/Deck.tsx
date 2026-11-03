@@ -1,5 +1,6 @@
 import type { Presentation } from '../core/model';
 import { SlideRenderer, type RenderMode } from './SlideRenderer';
+import { slideContext } from './textfx';
 
 /** Marcado del reproductor: lo usan el modo presentación y la exportación HTML. */
 export function Deck({ doc, mode }: { doc: Presentation; mode: Extract<RenderMode, 'play' | 'export'> }) {
@@ -22,7 +23,15 @@ export function Deck({ doc, mode }: { doc: Presentation; mode: Extract<RenderMod
             data-narration-volume={slide.narration.src && slide.narration.volume !== 1 ? slide.narration.volume : undefined}
             aria-label={slide.name || `Diapositiva ${i + 1}`}
           >
-            <SlideRenderer slide={slide} theme={doc.theme} width={doc.width} height={doc.height} mode={mode} />
+            <SlideRenderer
+              slide={slide}
+              theme={doc.theme}
+              width={doc.width}
+              height={doc.height}
+              mode={mode}
+              master={doc.master}
+              context={slideContext(doc, slide.id)}
+            />
           </section>
         ))}
       </div>

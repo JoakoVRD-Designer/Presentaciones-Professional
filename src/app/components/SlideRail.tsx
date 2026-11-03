@@ -1,5 +1,7 @@
 import { motion, Reorder } from 'framer-motion';
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, MessageSquare, Plus, Trash2, Wand2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, LayoutTemplate, MessageSquare, Plus, Trash2, Wand2 } from 'lucide-react';
+import { MASTER_ID } from '../../core/commands';
+import { slideContext } from '../../render/textfx';
 import { Avatar } from './Collab';
 import { duplicateForMorph } from '../lib/actions';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -10,14 +12,34 @@ import { sfx } from '../lib/sound';
 import { useEditor } from '../store/editor';
 import { ContextMenu, Popover, type MenuItem } from './ui/Popover';
 
-export const Thumb = memo(function Thumb({ slide, theme, width }: { slide: Slide; theme: Theme; width: number }) {
+export const Thumb = memo(function Thumb({
+  slide,
+  theme,
+  width,
+  master,
+  index,
+  total,
+  title,
+}: {
+  slide: Slide;
+  theme: Theme;
+  width: number;
+  master?: Slide;
+  index?: number;
+  total?: number;
+  title?: string;
+}) {
   const W = useEditor((s) => s.doc.width);
   const H = useEditor((s) => s.doc.height);
   const s = width / W;
+  const context = useMemo(
+    () => (index === undefined ? undefined : { index, total: total ?? 0, title: title ?? '' }),
+    [index, total, title],
+  );
   return (
     <div className="thumb" style={{ width, height: H * s }}>
       <div style={{ transform: `scale(${s})`, transformOrigin: '0 0', width: W, height: H }}>
-        <SlideRenderer slide={slide} theme={theme} width={W} height={H} mode="thumb" />
+        <SlideRenderer slide={slide} theme={theme} width={W} height={H} mode="thumb" master={master} context={context} />
       </div>
     </div>
   );
@@ -58,6 +80,8 @@ export function SlideRail() {
   const dispatch = useEditor((s) => s.dispatch);
   const peers = useEditor((s) => s.peers);
   const comments = useEditor((s) => s.comments);
+  const master = useEditor((s) => s.doc.master);
+  const docTitle = useEditor((s) => s.doc.title);
   const [order, setOrder] = useState(() => slides.map((s) => s.id));
   const dragging = useRef<string | null>(null);
   const [menu, setMenu] = useState<null | { x: number; y: number; id: string }>(null);
@@ -130,6 +154,19 @@ export function SlideRail() {
       <div className="rail-head">
         <span>Diapositivas</span>
         <span className="rail-count">{slides.length}</span>
+        <button
+          className={`rail-master${current === MASTER_ID ? ' is-active' : ''}`}
+          data-tip="Diapositiva maestra: logo, pie y numeración en todas"
+          onClick={() => {
+            sfx(current === MASTER_ID ? 'close' : 'open');
+            const st = useEditor.getState();
+            st.selectSlide(current === MASTER_ID ? st.masterBackdrop || slides[0]?.id || '' : MASTER_ID);
+          }}
+        >
+          <LayoutTemplate size={13} />
+          Maestra
+          {master && master.elements.length > 0 && <i>{master.elements.length}</i>}
+        </button>
       </div>
       <div className="rail-list" ref={listRef}>
         <Reorder.Group axis="y" values={order} onReorder={setOrder} className="rail-group" as="div">
@@ -171,7 +208,15 @@ export function SlideRail() {
               >
                 <span className="rail-num">{i + 1}</span>
                 <div className="rail-thumb">
-                  <Thumb slide={slide} theme={theme} width={176} />
+                  <Thumb
+                    slide={slide}
+                    theme={theme}
+                    width={176}
+                    master={master}
+                    index={slideContext({ title: docTitle, slides }, id).index}
+                    total={slides.filter((x) => !x.hidden).length}
+                    title={docTitle}
+                  />
                   {slide.hidden && (
                     <span className="rail-badge">
                       <EyeOff size={12} />

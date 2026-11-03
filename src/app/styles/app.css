@@ -263,6 +263,8 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .btn.primary:hover { background: #8d72ff; }
 .btn.soft { background: rgba(255, 255, 255, 0.045); }
 .btn.soft:hover { background: rgba(255, 255, 255, 0.08); }
+.btn.danger { background: rgba(255, 92, 122, 0.1); border-color: rgba(255, 92, 122, 0.35); color: #ff8fa3; }
+.btn.danger:hover { background: rgba(255, 92, 122, 0.18); }
 .btn.ghost { background: transparent; }
 .btn.ghost:hover { background: var(--ui-hover); }
 .btn.small { height: 28px; font-size: 12px; padding: 0 9px; }
@@ -272,7 +274,12 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 
 /* ---------- Rail de diapositivas ---------- */
 .rail { display: flex; flex-direction: column; min-height: 0; background: var(--ui-bg-2); border-right: 1px solid var(--ui-border); }
-.rail-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ui-muted); }
+.rail-head { display: flex; align-items: center; gap: 6px; padding: 14px 10px 8px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ui-muted); }
+.rail-head > span:first-child { flex: 1; }
+.rail-master { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 7px; border-radius: 8px; border: 1px solid var(--ui-border); background: transparent; color: var(--ui-text-2); font: 600 11px/1 Inter, system-ui, sans-serif; letter-spacing: 0; text-transform: none; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.rail-master:hover { background: var(--ui-hover); color: var(--ui-text); }
+.rail-master.is-active { background: var(--ui-accent-soft); border-color: var(--ui-accent); color: #fff; }
+.rail-master i { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--ui-raised); color: var(--ui-text); font-size: 9.5px; display: grid; place-items: center; }
 .rail-count { padding: 2px 7px; border-radius: 99px; background: var(--ui-hover); color: var(--ui-text-2); letter-spacing: 0; }
 .rail-list { flex: 1; overflow-y: auto; padding: 4px 10px 12px; }
 .rail-group { display: flex; flex-direction: column; gap: 6px; }
@@ -1075,3 +1082,33 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .comment-replies { display: inline-block; margin-top: 5px; font-size: 11px; color: var(--ui-accent-2); }
 .comments-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; color: var(--ui-muted); padding: 28px 10px; }
 .comments-empty p { margin: 4px 0 0; }
+
+/* ---------------- Diapositiva maestra ---------------- */
+.master-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 15; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 40px); padding: 8px 8px 8px 14px; border-radius: 14px; background: rgba(17, 18, 25, 0.88); border: 1px solid rgba(124, 92, 255, 0.45); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(124, 92, 255, 0.12); backdrop-filter: blur(14px); color: var(--ui-text); font-size: 12.5px; }
+.master-banner > svg { color: var(--ui-accent); flex: none; }
+.master-banner div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.master-banner b { font-size: 13px; }
+.master-banner span { color: var(--ui-text-2); }
+.master-banner code { padding: 1px 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ui-accent-2); }
+.master-banner .btn { flex: none; }
+.master-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.master-tokens code { padding: 3px 7px; border-radius: 6px; background: var(--ui-panel-2); border: 1px solid var(--ui-border); font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ui-accent-2); }
+.master-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.master-actions .btn { justify-content: flex-start; font-size: 12px; }
+
+/* ---------------- Código, fórmulas y SVG (inspector) ---------------- */
+.row-inline { display: flex; gap: 6px; align-items: center; }
+.row-inline > .select { flex: 1; min-width: 0; }
+.code-field { min-height: 0; margin: 6px 0 4px; font-size: 12px; tab-size: 2; white-space: pre; overflow-x: auto; }
+.code-themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.code-theme { min-width: 0; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 7px 7px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; text-align: left; transition: transform 0.15s var(--ui-ease), box-shadow 0.15s; }
+.code-theme span { font: 600 9.5px/1 'JetBrains Mono', monospace; white-space: nowrap; }
+.code-theme i { font-style: normal; }
+.code-theme b { font-size: 10.5px; font-weight: 650; opacity: 0.85; }
+.code-theme:hover { transform: translateY(-1px); }
+.code-theme.is-active { box-shadow: 0 0 0 2px var(--ui-accent), 0 0 0 5px var(--ui-accent-soft); }
+.math-preview { min-height: 64px; display: grid; place-items: center; padding: 12px; margin-bottom: 8px; border-radius: 10px; background: #f7f7fb; color: #15161d; font-size: 22px; overflow-x: auto; }
+.math-preview .katex-display { margin: 0; }
+.tex-chips { margin: 8px 0; }
+.tex-chips .chip { font-family: 'Times New Roman', serif; font-size: 13px; min-width: 30px; justify-content: center; }
+.hint code { padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.07); font-size: 10.5px; }

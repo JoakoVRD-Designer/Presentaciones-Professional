@@ -1,7 +1,9 @@
 import {
   ArrowDownToLine,
   ArrowUpToLine,
+  Check,
   Copy,
+  LayoutTemplate,
   Eye,
   EyeOff,
   Lock,
@@ -11,10 +13,11 @@ import {
   Unlock,
 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Command } from '../../core/commands';
+import { MASTER_ID, type Command } from '../../core/commands';
 import type { SlideElement } from '../../core/model';
 import { sanitizeHtml } from '../../core/sanitize';
 import { SlideRenderer } from '../../render/SlideRenderer';
+import { slideContext } from '../../render/textfx';
 import { countUp } from '../../runtime/player.js';
 import { mediaSize, uploadAsset } from '../lib/assets';
 import { setCursor } from '../lib/collab';
@@ -60,6 +63,18 @@ function snapAxis(cands: number[], targets: number[], threshold: number): { delt
 
 export function Canvas() {
   const slide = useCurrentSlide();
+  const isMaster = useEditor((s) => s.currentSlideId === MASTER_ID);
+  const master = useEditor((s) => s.doc.master);
+  const slides = useEditor((s) => s.doc.slides);
+  const docTitle = useEditor((s) => s.doc.title);
+  const backdropId = useEditor((s) => s.masterBackdrop);
+  // Al editar la maestra se ve sobre el fondo de una diapositiva real, para dar contexto.
+  const backdrop = isMaster ? (slides.find((x) => x.id === backdropId) ?? slides[0]) : undefined;
+  const shown = useMemo(() => (isMaster && slide && backdrop ? { ...slide, background: backdrop.background } : slide), [isMaster, slide, backdrop]);
+  const context = useMemo(
+    () => slideContext({ title: docTitle, slides }, isMaster ? (backdrop?.id ?? '') : (slide?.id ?? '')),
+    [docTitle, slides, isMaster, backdrop, slide],
+  );
   const theme = useEditor((s) => s.doc.theme);
   const W = useEditor((s) => s.doc.width);
   const H = useEditor((s) => s.doc.height);
@@ -500,7 +515,7 @@ export function Canvas() {
           style={{ width: W, height: H, transform: `scale(${scale})` }}
         >
           <SlideRenderer
-            slide={slide}
+            slide={shown ?? slide}
             theme={theme}
             width={W}
             height={H}
@@ -509,6 +524,8 @@ export function Canvas() {
             editingId={editingId}
             onTextCommit={onTextCommit}
             onEditEnd={onEditEnd}
+            master={isMaster ? undefined : master}
+            context={context}
           />
         </div>
 
@@ -633,6 +650,27 @@ export function Canvas() {
         </div>
       </div>
       {dragOver && <div className="drop-hint">Suelta imágenes o videos para añadirlos</div>}
+      {isMaster && (
+        <div className="master-banner" onPointerDown={(e) => e.stopPropagation()}>
+          <LayoutTemplate size={15} />
+          <div>
+            <b>Diapositiva maestra</b>
+            <span>
+              Lo que añadas aquí aparece en todas las diapositivas. Variables: <code>{'{n}'}</code> <code>{'{total}'}</code> <code>{'{title}'}</code>{' '}
+              <code>{'{date}'}</code>
+            </span>
+          </div>
+          <button
+            className="btn primary"
+            onClick={() => {
+              sfx('success');
+              useEditor.getState().selectSlide(backdrop?.id ?? slides[0]?.id ?? '');
+            }}
+          >
+            <Check size={14} /> Listo
+          </button>
+        </div>
+      )}
       <ContextMenu at={menu} items={menuItems} onClose={() => setMenu(null)} />
     </div>
   );

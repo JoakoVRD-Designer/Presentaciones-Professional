@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { applyCommands, type Command, type CommandResult } from '../../core/commands';
-import type { Presentation, Slide, SlideElement } from '../../core/model';
+import { applyCommands, MASTER_ID, type Command, type CommandResult } from '../../core/commands';
+import { makeSlide, type Presentation, type Slide, type SlideElement } from '../../core/model';
 import { createFromTemplate } from '../../core/templates';
 import type { Comment, Me, Peer } from '../lib/collab';
 
@@ -53,6 +53,8 @@ interface EditorState {
   commentDraft: { slideId: string; elementId: string | null; x: number; y: number } | null;
   /** Petición pendiente para el asistente de IA (la envía el panel al abrirse). */
   aiRequest: string | null;
+  /** Diapositiva usada como fondo de contexto al editar la maestra. */
+  masterBackdrop: string;
   videoOpen: boolean;
   historyOpen: boolean;
   liveAnimations: boolean;
@@ -98,8 +100,16 @@ export function writePref(key: string, value: unknown) {
   }
 }
 
+const EMPTY_MASTER = makeSlide({ id: MASTER_ID, name: 'Maestra' });
+
+/** Diapositiva por id; "master" devuelve la maestra (vacía si aún no existe). */
+export function slideById(doc: Presentation, id: string): Slide | undefined {
+  if (id === MASTER_ID) return doc.master ?? EMPTY_MASTER;
+  return doc.slides.find((s) => s.id === id);
+}
+
 function keepSlide(doc: Presentation, preferredId: string, prevDoc?: Presentation): string {
-  if (doc.slides.some((s) => s.id === preferredId)) return preferredId;
+  if (preferredId === MASTER_ID || doc.slides.some((s) => s.id === preferredId)) return preferredId;
   const prevIndex = prevDoc ? prevDoc.slides.findIndex((s) => s.id === preferredId) : 0;
   const i = Math.max(0, Math.min(prevIndex, doc.slides.length - 1));
   return doc.slides[i]?.id ?? '';
@@ -137,6 +147,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   showResolved: false,
   commentDraft: null,
   aiRequest: null,
+  masterBackdrop: '',
   videoOpen: false,
   historyOpen: false,
   liveAnimations: readPref('live', true),
@@ -214,9 +225,17 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   selectSlide: (id) => {
-    if (id === get().currentSlideId) return;
+    const prev = get().currentSlideId;
+    if (id === prev) return;
     const panel = get().panel;
-    set({ currentSlideId: id, selection: [], editingId: null, panel: panel === 'theme' || panel === 'layers' || panel === 'comments' ? panel : 'slide' });
+    set({
+      currentSlideId: id,
+      selection: [],
+      editingId: null,
+      panel: panel === 'theme' || panel === 'layers' || panel === 'comments' ? panel : 'slide',
+      // Al entrar en la maestra se recuerda la diapositiva de fondo para dar contexto.
+      ...(id === MASTER_ID && prev !== MASTER_ID ? { masterBackdrop: prev } : {}),
+    });
   },
   select: (ids) => {
     const panel = get().panel;
@@ -254,8 +273,10 @@ export const useEditor = create<EditorState>((set, get) => ({
 /* ---------- Selectores ---------- */
 
 export function useCurrentSlide(): Slide | undefined {
-  return useEditor((s) => s.doc.slides.find((sl) => sl.id === s.currentSlideId));
+  return useEditor((s) => slideById(s.doc, s.currentSlideId));
 }
+
+export const isMasterId = (id: string) => id === MASTER_ID;
 
 export function useSelectedElements(): SlideElement[] {
   const slide = useCurrentSlide();
@@ -272,7 +293,7 @@ export function currentSlideIndex(): number {
 /** Amplía una lista de ids con todos los miembros de sus grupos (en la diapositiva actual). */
 export function expandGroups(ids: string[]): string[] {
   const { doc, currentSlideId } = useEditor.getState();
-  const slide = doc.slides.find((s) => s.id === currentSlideId);
+  const slide = slideById(doc, currentSlideId);
   if (!slide) return ids;
   const groups = new Set(slide.elements.filter((e) => ids.includes(e.id) && e.group).map((e) => e.group));
   if (!groups.size) return ids;

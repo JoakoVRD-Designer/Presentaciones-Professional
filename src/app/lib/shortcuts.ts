@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Command } from '../../core/commands';
-import { useEditor } from '../store/editor';
+import { slideById, useEditor } from '../store/editor';
 import { CLIP_PREFIX, copySelection, duplicateSlide, exportHtml, exportPdf, insertElement, pasteElements, present } from './actions';
 import { mediaSize, uploadAsset } from './assets';
 import { toggleCommentMode } from './collab';
@@ -67,7 +67,7 @@ export function useShortcuts() {
         return;
       }
 
-      const slide = st.doc.slides.find((s) => s.id === st.currentSlideId);
+      const slide = slideById(st.doc, st.currentSlideId);
       const sel = slide?.elements.filter((x) => st.selection.includes(x.id)) ?? [];
       const each = (fn: (id: string) => Command) => st.dispatch(sel.map((x) => fn(x.id)));
 
@@ -187,7 +187,7 @@ export function useShortcuts() {
           }
           return;
         }
-        if ((e.key === 'Delete' || e.key === 'Backspace') && slide && e.shiftKey) {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && slide && e.shiftKey && slide.id !== 'master') {
           st.dispatch([{ op: 'slide.delete', slide: slide.id }]);
           sfx('remove');
         }

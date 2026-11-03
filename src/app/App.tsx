@@ -28,9 +28,7 @@ function StatusBar() {
   const idx = slides.findIndex((s) => s.id === current);
   return (
     <footer className="statusbar">
-      <span>
-        Diapositiva {idx + 1} de {slides.length}
-      </span>
+      <span>{current === 'master' ? 'Diapositiva maestra (todas las diapositivas)' : `Diapositiva ${idx + 1} de ${slides.length}`}</span>
       {selection.length > 0 && <span>· {selection.length} seleccionado{selection.length > 1 ? 's' : ''}</span>}
       <span className="grow" />
       <span className="muted">{serverMode ? 'API: /api · MCP disponible' : 'Modo local (sin servidor)'}</span>

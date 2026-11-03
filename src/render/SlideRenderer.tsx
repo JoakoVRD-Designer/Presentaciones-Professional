@@ -3,6 +3,7 @@ import { memo, useEffect, useLayoutEffect, useRef, type CSSProperties } from 're
 import type { Background, Slide, SlideElement, Theme } from '../core/model';
 import { ChartView } from './Chart';
 import { LottieView } from './LottieView';
+import { CodeView, MathView, SvgView } from './RichViews';
 import { TableView } from './Table';
 import { replaceTokens, splitHtml, type SlideContext } from './textfx';
 import { sanitizeHtml } from '../core/sanitize';
@@ -307,6 +308,12 @@ function ElementContent({
       return <LottieView el={el} mode={mode} />;
     case 'table':
       return <TableView el={el} />;
+    case 'code':
+      return <CodeView el={el} mode={mode} />;
+    case 'math':
+      return <MathView el={el} theme={theme} />;
+    case 'svg':
+      return <SvgView el={el} theme={theme} />;
     case 'embed':
       if (!el.url || mode === 'thumb') {
         return (

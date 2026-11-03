@@ -35,7 +35,10 @@ import { getTheme, THEMES } from './themes';
 
 const SlideRef = z
   .union([z.string(), z.number().int()])
-  .describe('Id de la diapositiva o su índice (0 = primera, -1 = última).');
+  .describe('Id de la diapositiva o su índice (0 = primera, -1 = última). "master" = la diapositiva maestra.');
+
+/** Id reservado de la diapositiva maestra (sus elementos aparecen en todas). */
+export const MASTER_ID = 'master';
 const ElementRef = z.string().describe('Id del elemento.');
 const Patch = z
   .record(z.string(), z.any())
@@ -210,13 +213,29 @@ function resolveSlideIndex(doc: Presentation, ref: string | number): number {
   return i;
 }
 
+function ensureMaster(draft: Draft<Presentation>): Draft<Slide> {
+  if (!draft.master) draft.master = makeSlide({ id: MASTER_ID, name: 'Maestra' }) as Draft<Slide>;
+  return draft.master;
+}
+
+/** Diapositiva (o la maestra) a la que se refiere un comando. */
+function slideAt(draft: Draft<Presentation>, ref: string | number): Draft<Slide> {
+  if (ref === MASTER_ID) return ensureMaster(draft);
+  return draft.slides[resolveSlideIndex(draft as unknown as Presentation, ref)];
+}
+
+/** Todos los elementos del documento, incluidos los de la maestra. */
+function allElements(doc: Presentation): SlideElement[] {
+  return [...doc.slides.flatMap((s) => s.elements), ...(doc.master?.elements ?? [])];
+}
+
 function findElement(
   doc: Draft<Presentation>,
   elementId: string,
   slideRef?: string | number,
 ): { slide: Draft<Slide>; index: number } {
   const slides =
-    slideRef === undefined ? doc.slides : [doc.slides[resolveSlideIndex(doc as Presentation, slideRef)]];
+    slideRef === undefined ? [...doc.slides, ...(doc.master ? [doc.master] : [])] : [slideAt(doc, slideRef)];
   for (const slide of slides) {
     const index = slide.elements.findIndex((e) => e.id === elementId);
     if (index >= 0) return { slide, index };
@@ -250,7 +269,7 @@ function cloneSlideWithNewIds(slide: Slide): Slide {
 
 function ensureUniqueIds(doc: Presentation, slide: Slide): Slide {
   const used = new Set<string>();
-  for (const s of doc.slides) for (const e of s.elements) used.add(e.id);
+  for (const e of allElements(doc)) used.add(e.id);
   const slideIds = new Set(doc.slides.map((s) => s.id));
   return {
     ...slide,
@@ -295,31 +314,40 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
       return slide.id;
     }
     case 'slide.update': {
-      const i = resolveSlideIndex(doc, cmd.slide);
-      const current = doc.slides[i];
+      const isMaster = cmd.slide === MASTER_ID;
+      const i = isMaster ? -1 : resolveSlideIndex(doc, cmd.slide);
+      const current = isMaster ? (doc.master ?? makeSlide({ id: MASTER_ID, name: 'Maestra' })) : doc.slides[i];
       const { elements, ...rest } = cmd.patch as Record<string, unknown>;
       const merged = deepMerge(current, rest);
       if (Array.isArray(elements)) (merged as { elements: unknown }).elements = elements;
       const parsed = SlideSchema.parse(merged);
-      draft.slides[i] = {
+      const next = {
         ...parsed,
         id: current.id,
         elements: parsed.elements.map((e) => ({ ...e, id: e.id ?? uid('el') })),
       } as Draft<Slide>;
+      if (isMaster) draft.master = next;
+      else draft.slides[i] = next;
       return current.id;
     }
     case 'slide.delete': {
+      if (cmd.slide === MASTER_ID) {
+        draft.master = undefined;
+        return MASTER_ID;
+      }
       const i = resolveSlideIndex(doc, cmd.slide);
       const [removed] = draft.slides.splice(i, 1);
       return removed.id;
     }
     case 'slide.duplicate': {
+      if (cmd.slide === MASTER_ID) throw new Error('La diapositiva maestra no se puede duplicar.');
       const i = resolveSlideIndex(doc, cmd.slide);
       const copy = cloneSlideWithNewIds(doc.slides[i]);
       draft.slides.splice(i + 1, 0, copy as Draft<Slide>);
       return copy.id;
     }
     case 'slide.move': {
+      if (cmd.slide === MASTER_ID) throw new Error('La diapositiva maestra no se puede mover.');
       const i = resolveSlideIndex(doc, cmd.slide);
       const to = Math.max(0, Math.min(cmd.to < 0 ? draft.slides.length + cmd.to : cmd.to, draft.slides.length - 1));
       const [s] = draft.slides.splice(i, 1);
@@ -327,25 +355,25 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
       return s.id;
     }
     case 'slide.background': {
-      const i = resolveSlideIndex(doc, cmd.slide);
-      draft.slides[i].background = BackgroundSchema.parse(deepMerge(doc.slides[i].background, cmd.background));
-      return doc.slides[i].id;
+      const target = slideAt(draft, cmd.slide);
+      target.background = BackgroundSchema.parse(deepMerge(clone(target.background), cmd.background));
+      return target.id;
     }
     case 'slide.transition': {
-      const i = resolveSlideIndex(doc, cmd.slide);
-      draft.slides[i].transition = TransitionSchema.parse(deepMerge(doc.slides[i].transition, cmd.transition));
-      return doc.slides[i].id;
+      const target = slideAt(draft, cmd.slide);
+      target.transition = TransitionSchema.parse(deepMerge(clone(target.transition), cmd.transition));
+      return target.id;
     }
     case 'slides.clear': {
       draft.slides = [];
       return undefined;
     }
     case 'element.add': {
-      const i = resolveSlideIndex(doc, cmd.slide);
+      const target = slideAt(draft, cmd.slide);
       let el = makeElement(cmd.element as never);
-      const exists = doc.slides.some((s) => s.elements.some((e) => e.id === el.id));
+      const exists = allElements(doc).some((e) => e.id === el.id);
       if (exists) el = { ...el, id: uid('el') };
-      const list = draft.slides[i].elements;
+      const list = target.elements;
       const at = cmd.index === undefined ? list.length : Math.max(0, Math.min(cmd.index, list.length));
       list.splice(at, 0, el as Draft<SlideElement>);
       return el.id;
@@ -416,7 +444,7 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
     }
     case 'element.move': {
       const { slide, index } = findElement(draft, cmd.element, cmd.slide);
-      const target = draft.slides[resolveSlideIndex(doc, cmd.toSlide)];
+      const target = slideAt(draft, cmd.toSlide);
       const [el] = slide.elements.splice(index, 1);
       target.elements.push(el);
       return el.id;
@@ -514,12 +542,33 @@ export function modelJsonSchemas(): Record<string, unknown> {
 }
 
 /** Resumen compacto del documento, pensado para el contexto de una IA. */
+function summarizeElement(e: SlideElement) {
+  return {
+    id: e.id,
+    type: e.type,
+    name: e.name || undefined,
+    box: [Math.round(e.x), Math.round(e.y), Math.round(e.w), Math.round(e.h)],
+    ...(e.type === 'text' ? { text: e.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140), size: e.size } : {}),
+    ...(e.type === 'image' || e.type === 'video' ? { src: e.src } : {}),
+    ...(e.type === 'icon' ? { icon: e.icon } : {}),
+    ...(e.type === 'shape' ? { shape: e.shape, fill: e.style.fill } : {}),
+    ...(e.type === 'table' ? { rows: e.rows.slice(0, 8) } : {}),
+    ...(e.type === 'chart' ? { chart: e.chart, labels: e.labels, series: e.series.map((s) => ({ name: s.name, values: s.values })) } : {}),
+    ...(e.type === 'code' ? { language: e.language, code: e.code.slice(0, 300) } : {}),
+    ...(e.type === 'math' ? { tex: e.tex } : {}),
+    ...(e.type === 'svg' ? { svg: `${e.svg.length} caracteres` } : {}),
+    entrance: e.animation.entrance,
+    step: e.animation.step || undefined,
+  };
+}
+
 export function summarizePresentation(doc: Presentation): unknown {
   return {
     id: doc.id,
     title: doc.title,
     theme: { id: doc.theme.id, fonts: doc.theme.fonts, colors: doc.theme.colors, radius: doc.theme.radius },
     settings: doc.settings,
+    master: doc.master?.elements.length ? { id: MASTER_ID, elements: doc.master.elements.map(summarizeElement) } : undefined,
     slides: doc.slides.map((s, i) => ({
       index: i,
       id: s.id,
@@ -534,20 +583,8 @@ export function summarizePresentation(doc: Presentation): unknown {
       },
       transition: s.transition.type,
       notes: s.notes || undefined,
-      elements: s.elements.map((e) => ({
-        id: e.id,
-        type: e.type,
-        name: e.name || undefined,
-        box: [Math.round(e.x), Math.round(e.y), Math.round(e.w), Math.round(e.h)],
-        ...(e.type === 'text' ? { text: e.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140), size: e.size } : {}),
-        ...(e.type === 'image' || e.type === 'video' ? { src: e.src } : {}),
-        ...(e.type === 'icon' ? { icon: e.icon } : {}),
-        ...(e.type === 'shape' ? { shape: e.shape, fill: e.style.fill } : {}),
-        ...(e.type === 'table' ? { rows: e.rows.slice(0, 8) } : {}),
-        ...(e.type === 'chart' ? { chart: e.chart, labels: e.labels, series: e.series.map((s) => ({ name: s.name, values: s.values })) } : {}),
-        entrance: e.animation.entrance,
-        step: e.animation.step || undefined,
-      })),
+      hideMaster: s.hideMaster || undefined,
+      elements: s.elements.map(summarizeElement),
     })),
   };
 }
@@ -556,8 +593,9 @@ export const API_GUIDE = `
 # API de Lumen (para IAs)
 
 Lumen es un editor de presentaciones HTML. El documento es JSON: una presentación
-tiene "theme", "settings" y "slides"; cada diapositiva tiene "background",
-"transition", "notes" y "elements" (text, image, video, shape, icon, embed).
+tiene "theme", "settings", "slides" y opcionalmente "master"; cada diapositiva tiene
+"background", "transition", "notes" y "elements" (text, image, video, shape, icon, embed,
+chart, table, lottie, code, math, svg).
 El lienzo mide 1920×1080 px; x/y/w/h de los elementos están en esas unidades.
 
 Todo cambio se hace con comandos JSON (campo "op"). Se envían en lote:
@@ -586,6 +624,15 @@ Cada comando devuelve { ok, op, id, error }. Si uno falla los demás continúan.
   labels: [...], series: [{ name, values: [...] }], prefix, suffix }, o la plantilla "chart".
 - Tablas: { type: "table", rows: [["Plan","Precio"],["Pro","$29"]], highlightColumn: 1 } o la plantilla "table".
 - Agrupa con elements.group y reparte con elements.distribute.
+- Diapositiva maestra: usa slide "master" (element.add { slide: "master", ... }) para logo, pie o
+  numeración que aparecen en todas las diapositivas. En textos admite variables {n} (número),
+  {total}, {title} (título de la presentación) y {date}. Una diapositiva puede ocultarla con
+  slide.update { patch: { hideMaster: true } } (p. ej. la portada).
+- Código: { type: "code", code: "...", language: "ts"|"python"|"js"|"json"|"bash"|..., typing: true
+  (efecto máquina de escribir), highlight: "2-4" (líneas destacadas), title: "archivo.ts" }.
+- Fórmulas: { type: "math", tex: "E = mc^2", size: 64 } (LaTeX con KaTeX).
+- Ilustraciones vectoriales: { type: "svg", svg: "<svg viewBox=...>...</svg>" }; usa
+  currentColor y var(--lm-primary)/var(--lm-accent) para que sigan el tema.
 - Iconos: nombres Lucide en PascalCase (Rocket, Sparkles, ChartLine, Users, Globe,
   ShieldCheck, Zap, BrainCircuit, Target, Lightbulb, Heart, Star, TrendingUp...).
 - Mantén márgenes de ~140 px y buen contraste.

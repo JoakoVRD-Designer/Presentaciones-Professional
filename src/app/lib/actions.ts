@@ -2,7 +2,7 @@
 import { normalizePresentation, type ElementInput } from '../../core/model';
 import { downloadFile, parseLumenHtml, printDocument, slugify } from '../../render/exportHtml';
 import { mapMedia } from '../../core/media';
-import { currentSlideIndex, useEditor } from '../store/editor';
+import { currentSlideIndex, slideById, useEditor } from '../store/editor';
 import { mediaSize, pickFile, uploadAsset } from './assets';
 import { sfx } from './sound';
 import { createDoc, flushNow, openDoc } from './sync';
@@ -11,7 +11,7 @@ const st = () => useEditor.getState();
 
 export function insertElement(element: ElementInput) {
   const s = st();
-  const slide = s.doc.slides.find((x) => x.id === s.currentSlideId);
+  const slide = slideById(s.doc, s.currentSlideId);
   if (!slide) {
     s.toast('Primero crea una diapositiva', 'info');
     return;
@@ -141,6 +141,26 @@ export function insertTable() {
   insertElement({ type: 'table', name: 'Tabla', w: 1200, h: 440, style: { radius: 16 }, animation: { entrance: 'fade' } } as ElementInput);
 }
 
+export function insertCode(code?: string, language = 'javascript') {
+  insertElement({
+    type: 'code',
+    name: 'Código',
+    w: 1100,
+    h: 520,
+    ...(code ? { code, language } : {}),
+    style: { radius: 22, shadow: { x: 0, y: 30, blur: 80, spread: -10, color: 'rgba(0,0,0,0.5)' } },
+    animation: { entrance: 'fade-up' },
+  } as ElementInput);
+}
+
+export function insertMath(tex?: string) {
+  insertElement({ type: 'math', name: 'Fórmula', w: 1000, h: 220, ...(tex ? { tex } : {}), animation: { entrance: 'fade' } } as ElementInput);
+}
+
+export function insertSvg(svg?: string, name = 'Ilustración') {
+  insertElement({ type: 'svg', name, w: 520, h: 520, ...(svg ? { svg } : {}), animation: { entrance: 'draw', duration: 1600 } } as ElementInput);
+}
+
 export function insertIcon(icon: string) {
   insertElement({ type: 'icon', icon, name: icon, w: 160, h: 160, animation: { entrance: 'zoom-in', easing: 'spring', loop: 'float' } });
 }
@@ -189,6 +209,10 @@ export function duplicateForMorph() {
 export function deleteSlide() {
   const s = st();
   if (!s.currentSlideId) return;
+  if (s.currentSlideId === 'master') {
+    s.toast('Para quitar la maestra usa «Quitar maestra» en su panel.', 'info');
+    return;
+  }
   s.dispatch([{ op: 'slide.delete', slide: s.currentSlideId }]);
   sfx('remove');
 }
@@ -310,7 +334,7 @@ const CLIP_PREFIX = '{"lumen-elements":';
 
 export function copySelection(cut = false) {
   const s = st();
-  const slide = s.doc.slides.find((x) => x.id === s.currentSlideId);
+  const slide = slideById(s.doc, s.currentSlideId);
   const els = slide?.elements.filter((e) => s.selection.includes(e.id)) ?? [];
   if (!els.length) return false;
   s.set({ clipboard: structuredClone(els) });

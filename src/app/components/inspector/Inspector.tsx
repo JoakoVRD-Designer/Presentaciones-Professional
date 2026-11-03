@@ -7,6 +7,7 @@ import { sfx } from '../../lib/sound';
 import { AnimationInspector } from './AnimationInspector';
 import { ElementInspector } from './ElementInspector';
 import { LayersPanel } from './LayersPanel';
+import { MasterInspector } from './MasterInspector';
 import { SlideInspector } from './SlideInspector';
 import { ThemeInspector } from './ThemeInspector';
 
@@ -18,6 +19,7 @@ export function Inspector() {
   const hasSel = elements.length > 0;
 
   const openComments = useEditor((s) => s.comments.filter((c) => !c.resolved).length);
+  const isMaster = useEditor((s) => s.currentSlideId === 'master');
   const commentsTab = {
     id: 'comments' as Panel,
     label: (
@@ -32,12 +34,12 @@ export function Inspector() {
     ? [
         { id: 'design', label: 'Diseño' },
         { id: 'animation', label: 'Animación' },
-        { id: 'slide', label: 'Diapo.' },
+        { id: 'slide', label: isMaster ? 'Maestra' : 'Diapo.' },
         { id: 'layers', label: 'Capas' },
         commentsTab,
       ]
     : [
-        { id: 'slide', label: 'Diapositiva' },
+        { id: 'slide', label: isMaster ? 'Maestra' : 'Diapositiva' },
         { id: 'theme', label: 'Tema' },
         { id: 'layers', label: 'Capas' },
         commentsTab,
@@ -74,7 +76,7 @@ export function Inspector() {
         >
           {active === 'design' && hasSel && <ElementInspector elements={elements} />}
           {active === 'animation' && hasSel && <AnimationInspector elements={elements} />}
-          {active === 'slide' && <SlideInspector />}
+          {active === 'slide' && (isMaster ? <MasterInspector /> : <SlideInspector />)}
           {active === 'theme' && <ThemeInspector />}
           {active === 'layers' && <LayersPanel />}
           {active === 'comments' && <CommentsPanel />}

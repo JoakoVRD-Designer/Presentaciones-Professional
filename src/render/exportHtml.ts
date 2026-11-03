@@ -19,7 +19,10 @@ import playerJs from '../runtime/player.js?raw';
 import slideCss from '../runtime/slide.css?raw';
 import lottieJs from 'lottie-web/build/player/lottie_light.min.js?raw';
 import { Deck } from './Deck';
+import { katexExportCss } from './katexCss';
+import { docUses, ensureRichLibs } from './richLibs';
 import { SlideRenderer } from './SlideRenderer';
+import { slideContext } from './textfx';
 
 export const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -103,8 +106,7 @@ async function buildFontCss(doc: Presentation, embed: boolean): Promise<{ css: s
     }
   };
   doc.slides.forEach((s) => scan(s.elements));
-  const master = (doc as unknown as { master?: { elements: Presentation['slides'][number]['elements'] } }).master;
-  if (master) scan(master.elements);
+  if (doc.master) scan(doc.master.elements);
   if (!embed) return { css: `@import url("${googleFontsUrl([...families])}");`, status: 'linked' };
   // Caracteres usados + los del reproductor (contador, cifras animadas).
   const chars = [...new Set(`${collectText(doc)} 0123456789/%$€.,:;-–—+×·…()!?¿¡"'«»`)].join('');
@@ -202,6 +204,8 @@ export async function exportHtml(input: Presentation, options: ExportOptions = {
   const fonts = await buildFontCss(input, opts.embedFonts);
 
   progress('Componiendo el archivo…');
+  await ensureRichLibs(doc);
+  const mathCss = docUses(doc, 'math') ? await katexExportCss(texSources(doc), opts.embedFonts) : '';
   const markup = deferMediaAttributes(renderToStaticMarkup(createElement(Deck, { doc, mode: 'export' })));
   const config = {
     width: doc.width,
@@ -236,6 +240,7 @@ ${fonts.css}
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 ${slideCss}
 ${playerCss}
+${mathCss}
 </style>
 </head>
 <body>
@@ -277,11 +282,15 @@ export function parseLumenHtml(text: string): { doc: unknown; media: Map<string,
 /* ------------------------------------------------------------------ */
 
 /** HTML con una página por diapositiva (estado final, sin animaciones) para imprimir o guardar como PDF. */
-export function buildPrintHtml(doc: Presentation): string {
+function texSources(doc: Presentation): string[] {
+  return [...doc.slides.flatMap((s) => s.elements), ...(doc.master?.elements ?? [])].flatMap((e) => (e.type === 'math' ? [e.tex] : []));
+}
+
+export function buildPrintHtml(doc: Presentation, extraCss = ''): string {
   const pages = doc.slides
     .filter((s) => !s.hidden)
     .map(
-      (slide, i) =>
+      (slide) =>
         `<section class="page">${renderToStaticMarkup(
           createElement(SlideRenderer, {
             slide,
@@ -289,9 +298,9 @@ export function buildPrintHtml(doc: Presentation): string {
             width: doc.width,
             height: doc.height,
             mode: 'thumb',
-            master: (doc as unknown as { master?: Presentation['slides'][number] }).master,
-            context: { index: i, total: doc.slides.length, title: doc.title },
-          } as never),
+            master: doc.master,
+            context: slideContext(doc, slide.id),
+          }),
         )}</section>`,
     )
     .join('\n');
@@ -306,7 +315,15 @@ html, body { margin: 0; background: #000; }
 .page:last-child { break-after: auto; page-break-after: auto; }
 .lm-fx, .lm-fx *, .lm-bg-grain, .lm-kenburns { animation-play-state: paused !important; }
 ${slideCss}
+${extraCss}
 </style></head><body>${pages}</body></html>`;
+}
+
+/** HTML paginado con código resaltado y fórmulas listas (CSS de KaTeX incluido). */
+export async function buildPrintHtmlReady(doc: Presentation): Promise<string> {
+  await ensureRichLibs(doc);
+  const mathCss = docUses(doc, 'math') ? await katexExportCss(texSources(doc), true) : '';
+  return buildPrintHtml(doc, mathCss);
 }
 
 /** Abre el diálogo de impresión (permite «Guardar como PDF»). */
@@ -320,7 +337,9 @@ export async function printDocument(doc: Presentation): Promise<void> {
       /* se deja la URL */
     }
   }
-  const html = buildPrintHtml(mapMedia(doc, (u) => map.get(u) ?? u));
+  await ensureRichLibs(doc);
+  const mathCss = docUses(doc, 'math') ? await katexExportCss(texSources(doc), true) : '';
+  const html = buildPrintHtml(mapMedia(doc, (u) => map.get(u) ?? u), mathCss);
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   Object.assign(frame.style, { position: 'fixed', left: '-10000px', top: '0', width: `${doc.width}px`, height: `${doc.height}px`, border: '0' });

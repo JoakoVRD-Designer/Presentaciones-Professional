@@ -289,13 +289,20 @@ export function SlideInspector() {
         <p className="hint">Se reproduce al entrar en la diapositiva (la música baja de volumen mientras tanto). Ideal para presentaciones autónomas y video.</p>
       </Section>
 
-      {useEditor.getState().doc.master && (
-        <Section title="Diapositiva maestra" id="sl-master" defaultOpen={false}>
+      <Section title="Diapositiva maestra" id="sl-master" defaultOpen={false}>
+        {(useEditor.getState().doc.master?.elements.length ?? 0) > 0 ? (
           <Row label="Ocultar maestra">
             <Switch checked={slide.hideMaster} onChange={(v) => p.update({ hideMaster: v })} />
           </Row>
-        </Section>
-      )}
+        ) : (
+          <p className="hint" style={{ marginTop: 0 }}>
+            Añade logo, pie o numeración ({'{n}'} / {'{total}'}) que aparecen en todas las diapositivas.
+          </p>
+        )}
+        <button className="btn soft" onClick={() => useEditor.getState().selectSlide('master')}>
+          Editar la maestra
+        </button>
+      </Section>
 
       <Section title="Notas del orador" id="sl-notes">
         <TextArea value={slide.notes} rows={5} placeholder="Lo que quieres decir en esta diapositiva…" onCommit={(v) => p.update({ notes: v })} />

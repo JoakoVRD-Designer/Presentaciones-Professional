@@ -24,6 +24,9 @@ import {
   MonitorSpeaker,
   MessageSquarePlus,
   MessageSquare,
+  SquareCode,
+  Sigma,
+  PenTool,
 } from 'lucide-react';
 import { toggleCommentMode } from '../lib/collab';
 import { useEffect } from 'react';
@@ -43,6 +46,9 @@ import {
   importJson,
   insertElement,
   insertChart,
+  insertCode,
+  insertMath,
+  insertSvg,
   insertGlassCard,
   insertTable,
   insertMedia,
@@ -151,6 +157,9 @@ export function CommandPalette() {
                   ))}
                   <Item icon={<Shapes size={15} />} label="Tarjeta de vidrio" onSelect={insertGlassCard} keywords={['glass']} />
                   <Item icon={<Shapes size={15} />} label="Tabla" onSelect={insertTable} keywords={['table', 'tabla', 'datos']} />
+                  <Item icon={<SquareCode size={15} />} label="Bloque de código" onSelect={() => insertCode()} keywords={['code', 'codigo', 'programa', 'sintaxis']} />
+                  <Item icon={<Sigma size={15} />} label="Fórmula matemática (LaTeX)" onSelect={() => insertMath()} keywords={['math', 'latex', 'katex', 'ecuacion', 'formula']} />
+                  <Item icon={<PenTool size={15} />} label="Ilustración SVG" onSelect={() => insertSvg()} keywords={['svg', 'vector', 'ilustracion', 'dibujo']} />
                   {['column', 'bar', 'line', 'area', 'donut', 'pie'].map((k) => (
                     <Item key={k} icon={<Shapes size={15} />} label={`Gráfico: ${k}`} onSelect={() => insertChart(k)} keywords={['chart', 'grafico', 'datos']} />
                   ))}

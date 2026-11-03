@@ -85,6 +85,17 @@ export interface SlideContext {
   title: string;
 }
 
+/**
+ * Contexto de numeración de una diapositiva: {n} cuenta solo las visibles
+ * (las ocultas no se presentan); una oculta usa su posición en la lista.
+ */
+export function slideContext(doc: { title: string; slides: { id: string; hidden?: boolean }[] }, slideId: string): SlideContext {
+  const visible = doc.slides.filter((s) => !s.hidden);
+  let index = visible.findIndex((s) => s.id === slideId);
+  if (index < 0) index = Math.max(0, doc.slides.findIndex((s) => s.id === slideId));
+  return { index, total: visible.length, title: doc.title };
+}
+
 export function replaceTokens(html: string, ctx?: SlideContext): string {
   if (!ctx || !html.includes('{')) return html;
   return html

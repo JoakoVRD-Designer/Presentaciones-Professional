@@ -146,7 +146,13 @@ export const BLEND_MODES = [
 
 export const MASKS = ['none', 'fade-bottom', 'fade-top', 'fade-left', 'fade-right', 'fade-edges', 'circle'] as const;
 
-export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart', 'table', 'lottie'] as const;
+export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart', 'table', 'lottie', 'code', 'math', 'svg'] as const;
+
+export const CODE_THEMES = ['auto', 'night', 'dracula', 'tokyo', 'solarized', 'github-light', 'paper'] as const;
+export const CODE_LANGUAGES = [
+  'javascript', 'typescript', 'python', 'json', 'html', 'css', 'bash', 'sql', 'java', 'go', 'rust', 'c', 'cpp',
+  'csharp', 'php', 'ruby', 'swift', 'kotlin', 'yaml', 'markdown', 'dockerfile', 'diff', 'plaintext',
+] as const;
 
 export const CHART_KINDS = ['bar', 'column', 'line', 'area', 'donut', 'pie'] as const;
 
@@ -413,6 +419,53 @@ export const LottieElementSchema = z
   })
   .describe('Animación vectorial Lottie (After Effects / LottieFiles).');
 
+export const CodeElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('code'),
+    code: z
+      .string()
+      .default("function saludar(nombre) {\n  const hora = new Date().getHours();\n  return `Hola, ${nombre} 👋`;\n}\n\nsaludar('Lumen');")
+      .describe('Código fuente (texto plano).'),
+    language: z.string().default('javascript').describe(`Lenguaje del resaltado: ${CODE_LANGUAGES.join(', ')}.`),
+    theme: z.enum(CODE_THEMES).default('auto').describe('Paleta del código; "auto" sigue los colores del tema.'),
+    fontSize: num(26, 8, 120),
+    lineNumbers: z.boolean().default(true),
+    title: z.string().default('').describe('Nombre de archivo o título en la barra de la ventana.'),
+    chrome: z.boolean().default(true).describe('Mostrar la barra de ventana con los tres botones.'),
+    highlight: z.string().default('').describe('Líneas destacadas, p. ej. "2,4-6"; el resto se atenúa.'),
+    typing: z.boolean().default(false).describe('Efecto máquina de escribir al aparecer (presentación y video).'),
+    typingSpeed: num(32, 4, 400).describe('Milisegundos por carácter del efecto de escritura.'),
+  })
+  .describe('Bloque de código con resaltado de sintaxis.');
+
+export const MathElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('math'),
+    tex: z.string().default('e^{i\\pi} + 1 = 0').describe('Fórmula en LaTeX (KaTeX).'),
+    size: num(72, 8, 400).describe('Tamaño de fuente en px.'),
+    color: z.string().default('').describe('Color; vacío = texto del tema.'),
+    align: z.enum(['left', 'center', 'right']).default('center'),
+    display: z.boolean().default(true).describe('Estilo de bloque (fracciones y sumatorios grandes).'),
+  })
+  .describe('Fórmula matemática.');
+
+export const SvgElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('svg'),
+    svg: z
+      .string()
+      .default(
+        '<svg viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--lm-primary)"/><stop offset="1" stop-color="var(--lm-accent)"/></linearGradient></defs><circle cx="100" cy="100" r="70" fill="url(#g)" opacity="0.9"/><path d="M60 110 L90 140 L145 75" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      )
+      .describe('Marcado SVG (se sanea: sin scripts ni recursos externos). Usa currentColor o var(--lm-primary)/var(--lm-accent).'),
+    color: z.string().default('').describe('Color de currentColor; vacío = primario del tema.'),
+    fit: z.enum(['contain', 'cover', 'fill']).default('contain'),
+  })
+  .describe('Ilustración vectorial SVG.');
+
 export const ElementSchema = z.discriminatedUnion('type', [
   TextElementSchema,
   ImageElementSchema,
@@ -423,6 +476,9 @@ export const ElementSchema = z.discriminatedUnion('type', [
   ChartElementSchema,
   TableElementSchema,
   LottieElementSchema,
+  CodeElementSchema,
+  MathElementSchema,
+  SvgElementSchema,
 ]);
 
 export const BackgroundSchema = z
@@ -562,6 +618,10 @@ export type ChartElement = WithId<z.infer<typeof ChartElementSchema>>;
 export type ChartKind = (typeof CHART_KINDS)[number];
 export type TableElement = WithId<z.infer<typeof TableElementSchema>>;
 export type LottieElement = WithId<z.infer<typeof LottieElementSchema>>;
+export type CodeElement = WithId<z.infer<typeof CodeElementSchema>>;
+export type MathElement = WithId<z.infer<typeof MathElementSchema>>;
+export type SvgElement = WithId<z.infer<typeof SvgElementSchema>>;
+export type CodeTheme = (typeof CODE_THEMES)[number];
 export type SlideElement =
   | TextElement
   | ImageElement
@@ -571,7 +631,10 @@ export type SlideElement =
   | EmbedElement
   | ChartElement
   | TableElement
-  | LottieElement;
+  | LottieElement
+  | CodeElement
+  | MathElement
+  | SvgElement;
 export type ElementType = SlideElement['type'];
 export type ElementInput = z.input<typeof ElementSchema>;
 export type Background = z.infer<typeof BackgroundSchema>;

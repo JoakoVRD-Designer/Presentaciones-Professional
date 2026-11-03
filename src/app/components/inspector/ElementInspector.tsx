@@ -35,6 +35,9 @@ import {
   Clapperboard,
   AlignHorizontalSpaceAround,
   AlignVerticalSpaceAround,
+  SquareCode,
+  Sigma,
+  PenTool,
 } from 'lucide-react';
 import type { Command } from '../../../core/commands';
 import { SHAPES, BLEND_MODES, MASKS, type SlideElement } from '../../../core/model';
@@ -49,6 +52,7 @@ import { ColorInput, Grid, NumberInput, Row, Section, Segmented, Select, Slider,
 import { Popover } from '../ui/Popover';
 import { ChartEditor } from './ChartEditor';
 import { TableEditor } from './TableEditor';
+import { CodeEditor, MathEditor, SvgEditor } from './RichEditors';
 import { BLEND_LABELS, MASK_LABELS, SHAPE_LABELS, toEmbedUrl, useElementPatch } from './common';
 
 const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type }> = {
@@ -61,6 +65,9 @@ const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type
   chart: { label: 'Gráfico', icon: ChartColumn },
   table: { label: 'Tabla', icon: Table2 },
   lottie: { label: 'Animación Lottie', icon: Clapperboard },
+  code: { label: 'Código', icon: SquareCode },
+  math: { label: 'Fórmula', icon: Sigma },
+  svg: { label: 'Ilustración SVG', icon: PenTool },
 };
 
 const SHADOWS: { id: string; label: string; value: null | { x: number; y: number; blur: number; spread: number; color: string } }[] = [
@@ -474,6 +481,9 @@ export function ElementInspector({ elements }: { elements: SlideElement[] }) {
 
       {!multi && el.type === 'chart' && <ChartEditor el={el} patch={patch} />}
       {!multi && el.type === 'table' && <TableEditor el={el} patch={patch} />}
+      {!multi && el.type === 'code' && <CodeEditor el={el} patch={patch} />}
+      {!multi && el.type === 'math' && <MathEditor el={el} patch={patch} />}
+      {!multi && el.type === 'svg' && <SvgEditor el={el} patch={patch} />}
 
       {!multi && el.type === 'lottie' && (
         <Section title="Animación Lottie" id="el-lottie">

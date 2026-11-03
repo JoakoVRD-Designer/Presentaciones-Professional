@@ -259,3 +259,71 @@ describe('buscar y reemplazar', () => {
     expect('el sol y la solución'.match(re)?.length).toBe(1);
   });
 });
+
+import { sanitizeSvg } from '../src/core/svg';
+import { parseLineSet, splitHighlighted } from '../src/render/richLibs';
+import { replaceTokens, slideContext } from '../src/render/textfx';
+
+describe('diapositiva maestra', () => {
+  it('añade, edita y quita elementos de la maestra con slide "master"', () => {
+    let { doc, results } = applyCommands(blank(), [
+      { op: 'slide.add' },
+      { op: 'slide.add' },
+      { op: 'element.add', slide: 'master', element: { type: 'text', html: '{n} / {total}' } },
+    ]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(doc.master?.id).toBe('master');
+    const id = doc.master!.elements[0].id;
+    ({ doc } = applyCommands(doc, [{ op: 'element.update', element: id, patch: { size: 20 } }]));
+    const el = doc.master!.elements[0];
+    expect(el.type === 'text' && el.size).toBe(20);
+    expect(JSON.stringify(summarizePresentation(doc))).toContain('"master"');
+    // No se puede duplicar ni mover; sí borrar.
+    expect(applyCommands(doc, [{ op: 'slide.duplicate', slide: 'master' }]).results[0].ok).toBe(false);
+    expect(applyCommands(doc, [{ op: 'slide.delete', slide: 'master' }]).doc.master).toBeUndefined();
+    // Los ids nuevos no chocan con los de la maestra.
+    const after = applyCommands(doc, [{ op: 'element.add', slide: 0, element: { id, type: 'text' } }]).doc;
+    expect(after.slides[0].elements[0].id).not.toBe(id);
+  });
+
+  it('numera solo las diapositivas visibles', () => {
+    const { doc } = applyCommands(blank(), [{ op: 'slide.add' }, { op: 'slide.add', slide: { hidden: true } }, { op: 'slide.add' }]);
+    const ctx = slideContext(doc, doc.slides[2].id);
+    expect(ctx).toMatchObject({ index: 1, total: 2 });
+    expect(replaceTokens('{n} de {total} · {title}', ctx)).toBe('2 de 2 · Prueba');
+  });
+});
+
+describe('código, fórmulas y SVG', () => {
+  it('valida los nuevos tipos de elemento', () => {
+    const { results, doc } = applyCommands(blank(), [
+      { op: 'slide.add' },
+      { op: 'element.add', slide: 0, element: { type: 'code', code: 'print(1)', language: 'python', typing: true } },
+      { op: 'element.add', slide: 0, element: { type: 'math', tex: 'a^2+b^2=c^2' } },
+      { op: 'element.add', slide: 0, element: { type: 'svg', svg: '<svg viewBox="0 0 1 1"/>' } },
+      { op: 'element.add', slide: 0, element: { type: 'code', theme: 'no-existe' } },
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([true, true, true, true, false]);
+    expect(doc.slides[0].elements.map((e) => e.type)).toEqual(['code', 'math', 'svg']);
+  });
+
+  it('divide HTML resaltado en líneas equilibradas', () => {
+    const lines = splitHighlighted('<span class="a">x\ny</span> z\nw');
+    expect(lines).toEqual(['<span class="a">x</span>', '<span class="a">y</span> z', 'w']);
+    expect([...parseLineSet('2, 4-6')]).toEqual([2, 4, 5, 6]);
+  });
+
+  it('sanea SVG: sin scripts, eventos ni recursos externos, con ids prefijados', () => {
+    const out = sanitizeSvg(
+      '<svg width="10" height="20" onload="x()"><script>alert(1)</script><defs><linearGradient id="g"/></defs>' +
+        '<rect fill="url(#g)" style="fill:url(http://evil)"/><use href="http://evil#a"/><image href="https://evil/x.png"/>' +
+        '<foreignObject><div>x</div></foreignObject><animate attributeName="href" to="javascript:alert(1)"/></svg>',
+      { idPrefix: 'el1' },
+    );
+    expect(out).not.toMatch(/script|onload|evil|foreignObject|javascript|attributeName="href"/i);
+    expect(out).toContain('viewBox="0 0 10 20"');
+    expect(out).toContain('id="el1-g"');
+    expect(out).toContain('fill="url(#el1-g)"');
+    expect(sanitizeSvg('no es svg')).toBe('');
+  });
+});

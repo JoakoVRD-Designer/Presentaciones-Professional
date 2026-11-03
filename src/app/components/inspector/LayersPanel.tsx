@@ -1,5 +1,8 @@
 import { Reorder } from 'framer-motion';
 import {
+  SquareCode,
+  Sigma,
+  PenTool,
   ChartColumn,
   Eye,
   EyeOff,
@@ -32,12 +35,18 @@ const TYPE_ICON: Record<SlideElement['type'], typeof Type> = {
   chart: ChartColumn,
   table: Table2,
   lottie: Clapperboard,
+  code: SquareCode,
+  math: Sigma,
+  svg: PenTool,
 };
 
 function labelOf(el: SlideElement): string {
   if (el.name) return el.name;
   if (el.type === 'text') return htmlToPlainText(el.html).slice(0, 40) || 'Texto';
   if (el.type === 'icon') return el.icon;
+  if (el.type === 'code') return el.title || el.code.split('\n').find((l) => l.trim())?.trim().slice(0, 40) || 'Código';
+  if (el.type === 'math') return el.tex.slice(0, 40) || 'Fórmula';
+  if (el.type === 'svg') return 'Ilustración';
   if (el.type === 'chart') return `Gráfico (${el.chart})`;
   return ({ image: 'Imagen', video: 'Video', shape: 'Forma', embed: 'Web', table: 'Tabla', lottie: 'Lottie' } as Record<string, string>)[el.type] ?? el.type;
 }

@@ -119,7 +119,7 @@ export function HistoryDialog() {
               <>
                 <div className="history-thumbs">
                   {preview.slides.slice(0, 9).map((s) => (
-                    <Thumb key={s.id} slide={s} theme={preview.theme} width={170} />
+                    <Thumb key={s.id} slide={s} theme={preview.theme} width={170} master={preview.master} />
                   ))}
                 </div>
                 <div className="btn-row">

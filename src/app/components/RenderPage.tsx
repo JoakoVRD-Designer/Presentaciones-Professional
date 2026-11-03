@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizePresentation, type Presentation } from '../../core/model';
 import { Deck } from '../../render/Deck';
+import { ensureRichLibs } from '../../render/richLibs';
 import { buildPlan, DEFAULT_VIDEO_OPTIONS, type VideoOptions, type VideoPlan } from '../../render/videoPlan';
 import { createPlayer, lumenSound, type PlayerInstance } from '../../runtime/player.js';
 
@@ -59,6 +60,12 @@ function waitEvent(el: EventTarget, name: string, timeout: number): Promise<void
 /** Coloca cada animación CSS/WAAPI en su instante exacto según el tiempo virtual. */
 function syncAnimations(starts: WeakMap<Animation, number>) {
   const now = vnow();
+  // Animaciones SMIL de ilustraciones SVG: se congelan en el instante virtual.
+  document.querySelectorAll<SVGSVGElement>('.lm-svg > svg').forEach((svg) => {
+    if (!svg.querySelector('animate, animateTransform, animateMotion')) return;
+    svg.pauseAnimations();
+    svg.setCurrentTime(now / 1000);
+  });
   for (const a of document.getAnimations()) {
     let s = starts.get(a);
     if (s === undefined) {
@@ -140,7 +147,12 @@ export function RenderPage({ id }: { id: string }) {
   useEffect(() => {
     fetch(`/api/presentations/${encodeURIComponent(id)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d) => setDoc(normalizePresentation(d)))
+      .then(async (d) => {
+        const parsed = normalizePresentation(d);
+        // Código y fórmulas se pintan ya resaltados desde el primer fotograma.
+        await ensureRichLibs(parsed);
+        setDoc(parsed);
+      })
       .catch((e: Error) => setError(e.message));
   }, [id]);
 

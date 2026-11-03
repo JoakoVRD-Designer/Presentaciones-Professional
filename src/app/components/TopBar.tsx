@@ -35,6 +35,9 @@ import {
   Keyboard,
   Table2,
   Share2,
+  SquareCode,
+  Sigma,
+  PenTool,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { BUILTIN_LOTTIE, STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -48,7 +51,10 @@ import {
   insertElement,
   insertGlassCard,
   insertChart,
+  insertCode,
   insertIcon,
+  insertMath,
+  insertSvg,
   insertTable,
   insertMedia,
   insertShape,
@@ -166,11 +172,16 @@ export function TopBar() {
       </div>
 
       <nav className="topbar-center" aria-label="Insertar">
-        <InsertButton icon={Type} label="Texto" width={240}>
+        <InsertButton icon={Type} label="Texto" width={250}>
           {(close) => (
             <MenuList
               onDone={close}
-              items={TEXT_PRESETS.map((p) => ({ label: p.label, icon: <Type size={14} />, onSelect: () => insertElement(p.element) }))}
+              items={[
+                ...TEXT_PRESETS.map((p) => ({ label: p.label, icon: <Type size={14} />, onSelect: () => insertElement(p.element) })),
+                'sep' as const,
+                { label: 'Bloque de código', icon: <SquareCode size={14} />, onSelect: () => insertCode() },
+                { label: 'Fórmula (LaTeX)', icon: <Sigma size={14} />, onSelect: () => insertMath() },
+              ]}
             />
           )}
         </InsertButton>
@@ -207,6 +218,15 @@ export function TopBar() {
                 }}
               >
                 <Square size={14} /> Tarjeta de vidrio
+              </button>
+              <button
+                className="btn soft wide"
+                onClick={() => {
+                  insertSvg();
+                  close();
+                }}
+              >
+                <PenTool size={14} /> Ilustración SVG
               </button>
             </div>
           )}

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw, MonitorPlay } from '
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Presentation } from '../../core/model';
 import { SlideRenderer } from '../../render/SlideRenderer';
+import { slideContext } from '../../render/textfx';
 import { presenterChannel, type PresenterMessage } from '../lib/presenter';
 
 function fmt(ms: number) {
@@ -32,7 +33,16 @@ function Scaled({ doc, index, label }: { doc: Presentation; index: number; label
       <div className="pv-frame" style={{ height: doc.height * s }}>
         {slide ? (
           <div style={{ transform: `scale(${s})`, transformOrigin: '0 0', width: doc.width, height: doc.height }}>
-            <SlideRenderer slide={slide} theme={doc.theme} width={doc.width} height={doc.height} mode="edit" live />
+            <SlideRenderer
+              slide={slide}
+              theme={doc.theme}
+              width={doc.width}
+              height={doc.height}
+              mode="edit"
+              live
+              master={doc.master}
+              context={slideContext(doc, slide.id)}
+            />
           </div>
         ) : (
           <div className="pv-end">Fin de la presentación</div>
