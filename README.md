@@ -40,13 +40,16 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
   círculo, disolver…) con sonido.
 - 8 temas, tipografías de Google Fonts, colores ligados al tema (`var(--lm-primary)`), 13
   plantillas de diapositiva y 3 plantillas de presentación.
-- Historial ilimitado (⌘Z / ⇧⌘Z), guardado automático, paleta de comandos (⌘K).
+- Historial (⌘Z / ⇧⌘Z), guardado automático, paleta de comandos (⌘K). Si una IA modifica la
+  presentación mientras editas, los cambios se **fusionan** por id sin perder tus ediciones.
 - **Sonidos de interfaz** sintetizados con Web Audio (sin archivos) e **iconos animados** con
   Framer Motion; ambos se pueden desactivar.
 
 **Presentación y exportación**
 - Modo presentación a pantalla completa: teclado, clic, gestos táctiles, notas del orador (N),
   pantalla negra (B), sonido (M), barra o puntos de progreso, avance automático y bucle.
+- **Vista del orador** en una segunda ventana: diapositiva actual y siguiente, notas ampliables,
+  cronómetro y control remoto, sincronizada en vivo con la presentación.
 - Exporta un **único archivo HTML autónomo** (los recursos locales se incrustan) que funciona en
   cualquier navegador, y JSON. También importa ambos formatos.
 
