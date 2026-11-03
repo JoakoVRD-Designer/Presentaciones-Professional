@@ -16,6 +16,7 @@ import { SlideRail } from './components/SlideRail';
 import { Toaster } from './components/Toaster';
 import { TopBar } from './components/TopBar';
 import { bootstrap } from './lib/sync';
+import { loadMe, startPresence } from './lib/collab';
 import { useShortcuts } from './lib/shortcuts';
 import { useEditor } from './store/editor';
 
@@ -45,6 +46,8 @@ export function App() {
   useShortcuts();
 
   useEffect(() => {
+    useEditor.setState({ me: loadMe() });
+    startPresence();
     bootstrap()
       .catch((err) => useEditor.getState().toast(`Error al iniciar: ${err instanceof Error ? err.message : err}`, 'error'))
       .finally(() => setReady(true));

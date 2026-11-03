@@ -13,6 +13,7 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
       ['⌘E · ⌘P', 'Exportar HTML · exportar PDF'],
       ['⌘O', 'Mis presentaciones'],
       ['⌘F', 'Buscar y reemplazar'],
+      ['C', 'Modo comentario (clic en el lienzo para comentar)'],
       ['?', 'Esta ayuda'],
     ],
   },

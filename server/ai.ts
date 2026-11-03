@@ -7,6 +7,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { API_GUIDE, commandJsonSchema, summarizePresentation } from '../src/core/commands';
 import { store } from './store';
+import { listComments, removePresence, replyComment, updatePresence } from './collab';
+
+const AI_PRESENCE = { clientId: 'claude', name: 'Claude', color: '#d97757', kind: 'ai' as const };
 
 export const AI_MODEL = process.env.LUMEN_AI_MODEL ?? 'claude-opus-5-5';
 const EFFORT = (process.env.LUMEN_AI_EFFORT ?? 'medium') as 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -40,6 +43,7 @@ ${API_GUIDE}
 - Cuida la composición: márgenes de ~140 px, jerarquía tipográfica clara, contraste suficiente, una idea por diapositiva.
 - Usa imágenes solo con URLs que conozcas como estables (p. ej. images.unsplash.com/photo-...?w=1920&q=80); si no, prefiere fondos de efecto.
 - Si un comando falla, lee el error y corrígelo.
+- Si te piden atender comentarios, usa list_comments, aplica los cambios y responde con reply_comment (resolve: true).
 - Al terminar, responde con un resumen breve (2-4 frases) de lo que hiciste. Sin listas largas.`;
 
 const ApplyInput = z.object({ commands: z.array(z.record(z.string(), z.unknown())).min(1) });
@@ -64,6 +68,20 @@ function buildTools(): Anthropic.Beta.BetaTool[] {
       name: 'get_presentation',
       description: 'Devuelve un resumen del estado actual de la presentación (diapositivas, elementos e ids).',
       input_schema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'list_comments',
+      description: 'Devuelve los comentarios de la presentación (con su diapositiva, elemento, respuestas y si están resueltos).',
+      input_schema: { type: 'object', properties: { includeResolved: { type: 'boolean' } } },
+    },
+    {
+      name: 'reply_comment',
+      description: 'Responde a un comentario (p. ej. explicando el cambio realizado) y opcionalmente lo marca como resuelto.',
+      input_schema: {
+        type: 'object',
+        properties: { comment: { type: 'string', description: 'Id del comentario.' }, text: { type: 'string' }, resolve: { type: 'boolean' } },
+        required: ['comment', 'text'],
+      },
     },
     {
       name: 'get_element',
@@ -96,6 +114,18 @@ async function runTool(
     const doc = await store.get(presentationId);
     return { content: JSON.stringify(doc ? summarizePresentation(doc) : null), isError: !doc };
   }
+  if (name === 'list_comments') {
+    const all = await listComments(presentationId);
+    const include = Boolean((input as { includeResolved?: boolean })?.includeResolved);
+    return { content: JSON.stringify(all.filter((c) => include || !c.resolved)), isError: false };
+  }
+  if (name === 'reply_comment') {
+    const i = input as { comment?: string; text?: string; resolve?: boolean };
+    if (!i?.comment || !i.text) return { content: 'Se requieren "comment" y "text".', isError: true };
+    const c = await replyComment(presentationId, i.comment, { text: i.text, resolve: !!i.resolve, author: 'Claude', color: AI_PRESENCE.color });
+    emit({ type: 'tool', name, ok: true, summary: `Respondió un comentario${i.resolve ? ' y lo resolvió' : ''}` });
+    return { content: JSON.stringify(c), isError: false };
+  }
   if (name === 'get_element') {
     const parsed = GetElementInput.safeParse(input);
     if (!parsed.success) return { content: 'Entrada inválida: se requiere "element".', isError: true };
@@ -110,6 +140,11 @@ async function runTool(
     }
     const result = await store.apply(presentationId, parsed.data.commands, 'ai');
     const okCount = result.results.filter((r) => r.ok).length;
+    // La presencia de la IA sigue a la diapositiva que está editando.
+    const touched = [...result.results].reverse().find((r) => r.ok && r.id)?.id;
+    const slide =
+      result.doc.slides.find((s) => s.id === touched) ?? result.doc.slides.find((s) => s.elements.some((e) => e.id === touched));
+    if (slide) updatePresence(presentationId, { ...AI_PRESENCE, slideId: slide.id, selection: slide.id === touched ? [] : [touched!] });
     const labels = parsed.data.commands.map(describeCommand);
     const unique = [...new Set(labels)];
     emit({
@@ -139,6 +174,14 @@ export async function runAssistant(opts: {
 
   const client = new Anthropic();
   const tools = buildTools();
+  updatePresence(presentationId, { ...AI_PRESENCE, slideId: doc.slides[0]?.id ?? '' });
+  try {
+    await loop();
+  } finally {
+    removePresence(presentationId, AI_PRESENCE.clientId);
+  }
+
+  async function loop() {
   const history: Anthropic.Beta.BetaMessageParam[] = opts.history
     .filter((t) => t.content.trim())
     .slice(-12)
@@ -149,7 +192,7 @@ export async function runAssistant(opts: {
     ...history,
     {
       role: 'user',
-      content: `Estado actual de la presentación (resumen JSON):\n${JSON.stringify(summarizePresentation(doc))}\n\nPetición:\n${prompt}`,
+      content: `Estado actual de la presentación (resumen JSON):\n${JSON.stringify(summarizePresentation(doc!))}\n\nPetición:\n${prompt}`,
     },
   ];
 
@@ -215,4 +258,5 @@ export async function runAssistant(opts: {
     messages.push({ role: 'user', content: results });
   }
   emit({ type: 'status', message: 'Se alcanzó el número máximo de pasos.' });
+  }
 }

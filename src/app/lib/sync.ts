@@ -8,6 +8,7 @@ import { merge3 } from '../../core/merge';
 import { normalizePresentation, uid, type Presentation } from '../../core/model';
 import { createFromTemplate } from '../../core/templates';
 import { useEditor } from '../store/editor';
+import { loadLocalComments, type Comment, type Peer } from './collab';
 
 export const CLIENT_ID = uid('client');
 const LOCAL_INDEX = 'lumen:docs';
@@ -123,6 +124,11 @@ function activate(doc: Presentation) {
   url.searchParams.set('p', doc.id);
   window.history.replaceState(null, '', url);
   document.title = `${doc.title} · Lumen`;
+  useEditor.setState({
+    peers: [],
+    openComment: null,
+    comments: useEditor.getState().serverMode ? [] : loadLocalComments(doc.id),
+  });
   connectEvents(doc.id);
 }
 
@@ -130,10 +136,21 @@ function connectEvents(id: string) {
   events?.close();
   events = null;
   if (!useEditor.getState().serverMode) return;
-  events = new EventSource(`/api/presentations/${id}/events`);
+  events = new EventSource(`/api/presentations/${id}/events?client=${encodeURIComponent(CLIENT_ID)}`);
   events.onmessage = (e) => {
     try {
-      const evt = JSON.parse(e.data) as { type: string; doc: Presentation; origin: string };
+      const evt = JSON.parse(e.data) as
+        | { type: 'doc'; doc: Presentation; origin: string }
+        | { type: 'presence'; users: Peer[] }
+        | { type: 'comments'; comments: Comment[] };
+      if (evt.type === 'presence') {
+        useEditor.setState({ peers: evt.users.filter((u) => u.clientId !== CLIENT_ID) });
+        return;
+      }
+      if (evt.type === 'comments') {
+        useEditor.setState({ comments: evt.comments });
+        return;
+      }
       if (evt.type !== 'doc' || evt.doc.id !== useEditor.getState().doc.id) return;
       serverRev = Math.max(serverRev, evt.doc.rev);
       if (evt.origin === CLIENT_ID) return;

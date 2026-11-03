@@ -22,7 +22,10 @@ import {
   Film,
   ArrowRight,
   MonitorSpeaker,
+  MessageSquarePlus,
+  MessageSquare,
 } from 'lucide-react';
+import { toggleCommentMode } from '../lib/collab';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { LAYOUTS } from '../../core/layouts';
@@ -114,6 +117,20 @@ export function CommandPalette() {
                   <Item icon={<Redo2 size={15} />} label="Rehacer" kbd="⇧⌘Z" onSelect={() => useEditor.getState().redo()} />
                   <Item icon={<Download size={15} />} label="Buscar y reemplazar" kbd="⌘F" onSelect={() => useEditor.setState({ findOpen: true })} keywords={['find', 'replace', 'buscar']} />
                   <Item icon={<Download size={15} />} label="Copiar enlace para compartir" onSelect={shareLink} keywords={['share', 'compartir', 'publicar', 'link']} />
+                  <Item icon={<MessageSquarePlus size={15} />} label="Comentar en el lienzo" kbd="C" onSelect={() => toggleCommentMode(true)} keywords={['comment', 'nota', 'revisar', 'feedback']} />
+                  <Item icon={<MessageSquare size={15} />} label="Ver comentarios" onSelect={() => useEditor.setState({ panel: 'comments' })} keywords={['comments', 'revision', 'hilos']} />
+                  <Item
+                    icon={<Sparkles size={15} />}
+                    label="Que Claude atienda los comentarios"
+                    onSelect={() =>
+                      useEditor.setState({
+                        aiOpen: true,
+                        aiRequest:
+                          'Atiende los comentarios abiertos de la presentación: léelos con list_comments, aplica los cambios que piden y responde a cada uno con reply_comment explicando qué hiciste (resolve: true).',
+                      })
+                    }
+                    keywords={['ai', 'comentarios', 'revision']}
+                  />
                   <Item icon={<FolderOpen size={15} />} label="Historial de versiones" onSelect={() => useEditor.setState({ historyOpen: true })} keywords={['history', 'versiones', 'restaurar']} />
                   <Item icon={<FolderOpen size={15} />} label="Mis presentaciones" kbd="⌘O" onSelect={() => useEditor.setState({ docsOpen: true })} />
                 </Command.Group>

@@ -17,8 +17,10 @@ import { sanitizeHtml } from '../../core/sanitize';
 import { SlideRenderer } from '../../render/SlideRenderer';
 import { countUp } from '../../runtime/player.js';
 import { mediaSize, uploadAsset } from '../lib/assets';
+import { setCursor } from '../lib/collab';
 import { sfx } from '../lib/sound';
 import { expandGroups, useCurrentSlide, useEditor } from '../store/editor';
+import { CommentLayer, PeerLayer } from './Collab';
 import { ContextMenu, type MenuItem } from './ui/Popover';
 
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -66,6 +68,7 @@ export function Canvas() {
   const zoom = useEditor((s) => s.zoom);
   const live = useEditor((s) => s.liveAnimations);
   const previewTick = useEditor((s) => s.previewTick);
+  const commentMode = useEditor((s) => s.commentMode);
 
   const viewport = useRef<HTMLDivElement>(null);
   const slideLayer = useRef<HTMLDivElement>(null);
@@ -144,11 +147,41 @@ export function Canvas() {
 
   const dispatch = useEditor((s) => s.dispatch);
 
+  /* ---------- Colaboración ---------- */
+  /** En modo comentario, un clic fija la posición de un comentario nuevo. */
+  const placeComment = (clientX: number, clientY: number, elementId?: string) => {
+    if (!slide || !slideLayer.current) return;
+    const p = toSlide(clientX, clientY);
+    if (p.x < 0 || p.y < 0 || p.x > W || p.y > H) {
+      useEditor.setState({ commentDraft: null });
+      return;
+    }
+    const hit =
+      elementId ??
+      [...slide.elements].reverse().find((el) => !el.hidden && p.x >= el.x && p.x <= el.x + el.w && p.y >= el.y && p.y <= el.y + el.h)?.id;
+    sfx('pop');
+    useEditor.setState({
+      commentDraft: { slideId: slide.id, elementId: hit ?? null, x: Math.round(p.x), y: Math.round(p.y) },
+      openComment: null,
+    });
+  };
+  const onPointerMoveCursor = (e: React.PointerEvent) => {
+    if (!slideLayer.current || e.pointerType === 'touch') return;
+    const p = toSlide(e.clientX, e.clientY);
+    setCursor(p.x < -40 || p.y < -40 || p.x > W + 40 || p.y > H + 40 ? null : p);
+  };
+
   /* ---------- Arrastrar elementos ---------- */
   const startDrag = (e: React.PointerEvent, el: SlideElement) => {
     if (e.button !== 0 || !slide) return;
     e.stopPropagation();
     const st = useEditor.getState();
+    if (st.commentMode) {
+      e.preventDefault(); // evita que el mousedown quite el foco al cuadro de comentario
+      placeComment(e.clientX, e.clientY, el.id);
+      return;
+    }
+    if (st.openComment || st.commentDraft) useEditor.setState({ openComment: null, commentDraft: null });
     if (st.editingId === el.id) return;
     if (st.editingId) st.setEditing(null);
     let ids = st.selection;
@@ -299,6 +332,15 @@ export function Canvas() {
   const onViewportDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || !slide || !slideLayer.current) return;
     const st = useEditor.getState();
+    if (st.commentMode) {
+      e.preventDefault();
+      placeComment(e.clientX, e.clientY);
+      return;
+    }
+    if (st.openComment || st.commentDraft) {
+      useEditor.setState({ openComment: null, commentDraft: null });
+      return;
+    }
     if (st.editingId) {
       st.setEditing(null);
       return;
@@ -436,9 +478,11 @@ export function Canvas() {
 
   return (
     <div
-      className={`canvas-viewport${dragOver ? ' is-dragover' : ''}`}
+      className={`canvas-viewport${dragOver ? ' is-dragover' : ''}${commentMode ? ' is-commenting' : ''}`}
       ref={viewport}
       onPointerDown={onViewportDown}
+      onPointerMove={onPointerMoveCursor}
+      onPointerLeave={() => setCursor(null)}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
@@ -484,7 +528,7 @@ export function Canvas() {
                 onPointerDown={(e) => startDrag(e, el)}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  if (el.type === 'text' && !el.locked) {
+                  if (el.type === 'text' && !el.locked && !useEditor.getState().commentMode) {
                     useEditor.getState().select([el.id]);
                     useEditor.getState().setEditing(el.id);
                   }
@@ -584,6 +628,8 @@ export function Canvas() {
               style={{ left: marquee.x * scale, top: marquee.y * scale, width: marquee.w * scale, height: marquee.h * scale }}
             />
           )}
+          <PeerLayer slide={slide} scale={scale} />
+          <CommentLayer slide={slide} scale={scale} W={W} H={H} />
         </div>
       </div>
       {dragOver && <div className="drop-hint">Suelta imágenes o videos para añadirlos</div>}

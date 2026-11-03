@@ -60,6 +60,7 @@ import {
 import { openPresenterWindow } from '../lib/presenter';
 import { sfx } from '../lib/sound';
 import { useEditor } from '../store/editor';
+import { CommentButton, PresenceBar } from './Collab';
 import { IconPicker } from './IconPicker';
 import { toEmbedUrl, SHAPE_LABELS } from './inspector/common';
 import { AnimatedIcon, IconButton } from './ui/IconButton';
@@ -159,6 +160,9 @@ export function TopBar() {
           />
         </div>
         <SyncBadge />
+        <span className="topbar-sep" />
+        <IconButton icon={Undo2} label="Deshacer" kbd="⌘Z" anim="left" disabled={!canUndo} onClick={() => useEditor.getState().undo()} />
+        <IconButton icon={Redo2} label="Rehacer" kbd="⇧⌘Z" anim="right" disabled={!canRedo} onClick={() => useEditor.getState().redo()} />
       </div>
 
       <nav className="topbar-center" aria-label="Insertar">
@@ -371,9 +375,6 @@ export function TopBar() {
       </nav>
 
       <div className="topbar-right">
-        <IconButton icon={Undo2} label="Deshacer" kbd="⌘Z" anim="left" disabled={!canUndo} onClick={() => useEditor.getState().undo()} />
-        <IconButton icon={Redo2} label="Rehacer" kbd="⇧⌘Z" anim="right" disabled={!canRedo} onClick={() => useEditor.getState().redo()} />
-        <span className="topbar-sep" />
         <Popover
           width={200}
           align="end"
@@ -422,6 +423,9 @@ export function TopBar() {
             />
           )}
         </Popover>
+        <span className="topbar-sep" />
+        <PresenceBar />
+        <CommentButton />
         <motion.button
           className={`ai-btn${aiOpen ? ' is-active' : ''}`}
           onClick={() => {

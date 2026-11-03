@@ -189,8 +189,8 @@ class Store extends EventEmitter {
     const doc = opts.document
       ? normalizePresentation({ ...(opts.document as object), id: undefined })
       : createFromTemplate(opts.template ?? 'blank', opts.title);
-    if (opts.title) doc.title = opts.title;
-    return this.save(doc, origin);
+    // Los documentos producidos por los comandos están congelados (immer): se copia.
+    return this.save(opts.title ? { ...doc, title: opts.title } : doc, origin);
   }
 
   async remove(id: string) {

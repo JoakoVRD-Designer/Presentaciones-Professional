@@ -16,6 +16,7 @@ import { THEMES } from '../src/core/themes';
 
 const BASE = (process.env.LUMEN_URL ?? 'http://localhost:4317').replace(/\/$/, '');
 const TOKEN = process.env.LUMEN_API_TOKEN ?? '';
+const AGENT = process.env.LUMEN_AGENT_NAME ?? 'Agente MCP';
 
 async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}/api${path}`, {
@@ -23,6 +24,7 @@ async function api<T = unknown>(method: string, path: string, body?: unknown): P
     headers: {
       'Content-Type': 'application/json',
       'x-lumen-client': 'mcp',
+      'x-lumen-agent': encodeURIComponent(AGENT),
       ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -140,6 +142,64 @@ server.registerTool(
           commands: [{ op: 'slide.add', layout, content, index, slide: notes ? { notes } : undefined }],
         }),
       );
+    } catch (e) {
+      return fail(e);
+    }
+  },
+);
+
+server.registerTool(
+  'list_comments',
+  {
+    title: 'Ver comentarios',
+    description:
+      'Lista los comentarios de revisión de una presentación (diapositiva, elemento, texto, respuestas y si están resueltos). Úsalos como tareas: aplica los cambios y responde con reply_comment.',
+    inputSchema: { id: z.string(), includeResolved: z.boolean().optional() },
+    annotations: { readOnlyHint: true },
+  },
+  async ({ id, includeResolved }) => {
+    try {
+      const all = await api<{ resolved: boolean }[]>('GET', `/presentations/${id}/comments`);
+      return ok(all.filter((c) => includeResolved || !c.resolved));
+    } catch (e) {
+      return fail(e);
+    }
+  },
+);
+
+server.registerTool(
+  'add_comment',
+  {
+    title: 'Comentar',
+    description: 'Deja un comentario anclado a una diapositiva (y opcionalmente a un elemento) en la posición x,y del lienzo (1920×1080).',
+    inputSchema: {
+      id: z.string(),
+      slideId: z.string(),
+      text: z.string().min(1),
+      elementId: z.string().optional(),
+      x: z.number().optional(),
+      y: z.number().optional(),
+    },
+  },
+  async ({ id, slideId, text, elementId, x, y }) => {
+    try {
+      return ok(await api('POST', `/presentations/${id}/comments`, { slideId, elementId, text, x: x ?? 960, y: y ?? 540, author: AGENT, color: '#d97757' }));
+    } catch (e) {
+      return fail(e);
+    }
+  },
+);
+
+server.registerTool(
+  'reply_comment',
+  {
+    title: 'Responder comentario',
+    description: 'Responde a un comentario (p. ej. explicando el cambio realizado) y opcionalmente lo marca como resuelto.',
+    inputSchema: { id: z.string(), comment: z.string(), text: z.string().min(1), resolve: z.boolean().optional() },
+  },
+  async ({ id, comment, text, resolve }) => {
+    try {
+      return ok(await api('POST', `/presentations/${id}/comments/${comment}/replies`, { text, resolve: !!resolve, author: AGENT, color: '#d97757' }));
     } catch (e) {
       return fail(e);
     }

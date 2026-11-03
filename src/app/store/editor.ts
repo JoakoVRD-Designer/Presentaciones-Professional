@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { applyCommands, type Command, type CommandResult } from '../../core/commands';
 import type { Presentation, Slide, SlideElement } from '../../core/model';
 import { createFromTemplate } from '../../core/templates';
+import type { Comment, Me, Peer } from '../lib/collab';
 
-export type Panel = 'design' | 'animation' | 'slide' | 'theme' | 'layers';
+export type Panel = 'design' | 'animation' | 'slide' | 'theme' | 'layers' | 'comments';
 export type SyncStatus = 'connecting' | 'saved' | 'saving' | 'error' | 'local';
 
 export interface Toast {
@@ -42,6 +43,16 @@ interface EditorState {
   helpOpen: boolean;
   findOpen: boolean;
   exportOpen: boolean;
+  me: Me;
+  peers: Peer[];
+  comments: Comment[];
+  commentMode: boolean;
+  openComment: string | null;
+  showResolved: boolean;
+  /** Comentario a punto de crearse (posición elegida en el lienzo). */
+  commentDraft: { slideId: string; elementId: string | null; x: number; y: number } | null;
+  /** Petición pendiente para el asistente de IA (la envía el panel al abrirse). */
+  aiRequest: string | null;
   videoOpen: boolean;
   historyOpen: boolean;
   liveAnimations: boolean;
@@ -118,6 +129,14 @@ export const useEditor = create<EditorState>((set, get) => ({
   helpOpen: false,
   findOpen: false,
   exportOpen: false,
+  me: { name: 'Tú', color: '#7c5cff' },
+  peers: [],
+  comments: [],
+  commentMode: false,
+  openComment: null,
+  showResolved: false,
+  commentDraft: null,
+  aiRequest: null,
   videoOpen: false,
   historyOpen: false,
   liveAnimations: readPref('live', true),
@@ -197,7 +216,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   selectSlide: (id) => {
     if (id === get().currentSlideId) return;
     const panel = get().panel;
-    set({ currentSlideId: id, selection: [], editingId: null, panel: panel === 'theme' || panel === 'layers' ? panel : 'slide' });
+    set({ currentSlideId: id, selection: [], editingId: null, panel: panel === 'theme' || panel === 'layers' || panel === 'comments' ? panel : 'slide' });
   },
   select: (ids) => {
     const panel = get().panel;
@@ -205,8 +224,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       selection: ids,
       editingId: null,
       panel:
-        panel === 'layers'
-          ? 'layers'
+        panel === 'layers' || panel === 'comments'
+          ? panel
           : ids.length
             ? panel === 'animation'
               ? 'animation'

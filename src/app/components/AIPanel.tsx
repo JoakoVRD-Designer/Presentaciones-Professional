@@ -24,6 +24,7 @@ const SUGGESTIONS = [
   'Traduce toda la presentación al inglés',
   'Cambia a un estilo editorial elegante en blanco y negro',
   'Añade notas del orador a cada diapositiva',
+  'Atiende los comentarios abiertos y respóndelos',
 ];
 
 /** El historial del chat persiste aunque el panel se cierre. */
@@ -53,6 +54,15 @@ function Assistant({ available }: { available: boolean | null }) {
   useEffect(() => {
     list.current?.scrollTo({ top: list.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  // Peticiones lanzadas desde otras partes del editor (p. ej. «atender comentarios»).
+  const aiRequest = useEditor((s) => s.aiRequest);
+  useEffect(() => {
+    if (!aiRequest || busy || available !== true) return;
+    useEditor.setState({ aiRequest: null });
+    void send(aiRequest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiRequest, busy, available]);
 
   const send = async (prompt: string) => {
     if (!prompt.trim() || busy) return;
@@ -320,6 +330,10 @@ export function AIPanel() {
   const [available, setAvailable] = useState<boolean | null>(null);
   const serverMode = useEditor((s) => s.serverMode);
   const hasMessages = useChat((s) => s.messages.length > 0);
+  const aiRequest = useEditor((s) => s.aiRequest);
+  useEffect(() => {
+    if (aiRequest) setTab('chat');
+  }, [aiRequest]);
 
   useEffect(() => {
     if (!open || !serverMode) return;

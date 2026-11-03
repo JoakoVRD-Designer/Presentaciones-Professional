@@ -1,5 +1,6 @@
 import { motion, Reorder } from 'framer-motion';
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Plus, Trash2, Wand2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, MessageSquare, Plus, Trash2, Wand2 } from 'lucide-react';
+import { Avatar } from './Collab';
 import { duplicateForMorph } from '../lib/actions';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLayout, LAYOUTS } from '../../core/layouts';
@@ -55,6 +56,8 @@ export function SlideRail() {
   const theme = useEditor((s) => s.doc.theme);
   const current = useEditor((s) => s.currentSlideId);
   const dispatch = useEditor((s) => s.dispatch);
+  const peers = useEditor((s) => s.peers);
+  const comments = useEditor((s) => s.comments);
   const [order, setOrder] = useState(() => slides.map((s) => s.id));
   const dragging = useRef<string | null>(null);
   const [menu, setMenu] = useState<null | { x: number; y: number; id: string }>(null);
@@ -175,6 +178,27 @@ export function SlideRail() {
                     </span>
                   )}
                   {slide.transition.type !== 'none' && <span className="rail-trans" title={`Transición: ${slide.transition.type}`} />}
+                  {(() => {
+                    const open = comments.filter((c) => c.slideId === id && !c.resolved).length;
+                    return open > 0 ? (
+                      <span className="rail-comments" title={`${open} ${open === 1 ? 'comentario abierto' : 'comentarios abiertos'}`}>
+                        <MessageSquare size={10} strokeWidth={2.6} />
+                        {open}
+                      </span>
+                    ) : null;
+                  })()}
+                  {peers.some((p) => p.slideId === id) && (
+                    <span className="rail-peers">
+                      {peers
+                        .filter((p) => p.slideId === id)
+                        .slice(0, 3)
+                        .map((p) => (
+                          <span key={p.clientId} title={p.name}>
+                            <Avatar name={p.name} color={p.color} ai={p.kind === 'ai'} size={18} />
+                          </span>
+                        ))}
+                    </span>
+                  )}
                 </div>
               </Reorder.Item>
             );

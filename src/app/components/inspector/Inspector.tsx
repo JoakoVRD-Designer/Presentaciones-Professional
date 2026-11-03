@@ -1,4 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { MessageSquare } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { CommentsPanel } from '../Collab';
 import { useCurrentSlide, useEditor, type Panel } from '../../store/editor';
 import { sfx } from '../../lib/sound';
 import { AnimationInspector } from './AnimationInspector';
@@ -14,17 +17,30 @@ export function Inspector() {
   const elements = slide?.elements.filter((e) => selection.includes(e.id)) ?? [];
   const hasSel = elements.length > 0;
 
-  const tabs: { id: Panel; label: string }[] = hasSel
+  const openComments = useEditor((s) => s.comments.filter((c) => !c.resolved).length);
+  const commentsTab = {
+    id: 'comments' as Panel,
+    label: (
+      <span className="tab-icon" data-tip="Comentarios">
+        <MessageSquare size={13} />
+        {openComments > 0 && <b>{openComments}</b>}
+      </span>
+    ),
+    narrow: true,
+  };
+  const tabs: { id: Panel; label: ReactNode; narrow?: boolean }[] = hasSel
     ? [
         { id: 'design', label: 'Diseño' },
         { id: 'animation', label: 'Animación' },
         { id: 'slide', label: 'Diapo.' },
         { id: 'layers', label: 'Capas' },
+        commentsTab,
       ]
     : [
         { id: 'slide', label: 'Diapositiva' },
         { id: 'theme', label: 'Tema' },
         { id: 'layers', label: 'Capas' },
+        commentsTab,
       ];
   const active = tabs.some((t) => t.id === panel) ? panel : tabs[0].id;
 
@@ -36,7 +52,7 @@ export function Inspector() {
             key={t.id}
             role="tab"
             aria-selected={active === t.id}
-            className={`tab${active === t.id ? ' is-active' : ''}`}
+            className={`tab${active === t.id ? ' is-active' : ''}${t.narrow ? ' is-narrow' : ''}`}
             onClick={() => {
               if (active !== t.id) sfx('tick');
               useEditor.setState({ panel: t.id });
@@ -49,7 +65,7 @@ export function Inspector() {
       </nav>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={active === 'layers' ? 'layers' : `${active}:${hasSel ? elements.map((e) => e.id).join(',') : 'none'}`}
+          key={active === 'layers' || active === 'comments' ? active : `${active}:${hasSel ? elements.map((e) => e.id).join(',') : 'none'}`}
           className="inspector-body"
           initial={{ opacity: 0, x: 8 }}
           animate={{ opacity: 1, x: 0 }}
@@ -61,6 +77,7 @@ export function Inspector() {
           {active === 'slide' && <SlideInspector />}
           {active === 'theme' && <ThemeInspector />}
           {active === 'layers' && <LayersPanel />}
+          {active === 'comments' && <CommentsPanel />}
         </motion.div>
       </AnimatePresence>
     </aside>

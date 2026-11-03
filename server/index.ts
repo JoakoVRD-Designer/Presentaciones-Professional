@@ -13,6 +13,19 @@ import { TEMPLATES } from '../src/core/templates';
 import { THEMES } from '../src/core/themes';
 import { AI_MODEL, aiAvailable, runAssistant, type AiEvent, type ChatTurn } from './ai';
 import { ASSETS_DIR, store, type DocEvent } from './store';
+import {
+  addComment,
+  collab,
+  deleteComment,
+  listComments,
+  listPresence,
+  patchComment,
+  removePresence,
+  replyComment,
+  updatePresence,
+  type Comment,
+  type Presence,
+} from './collab';
 import { cancelJob, defaultAppUrl, getJob, isSafeAppUrl, listJobs, startVideoJob, videoCapabilities, type VideoRenderOptions } from './video';
 
 const PORT = Number(process.env.PORT ?? 4317);
@@ -55,8 +68,12 @@ app.get('/api', (_req, res) => {
       'GET /api/presentations/:id': 'Documento completo (?summary=1 para resumen)',
       'PUT /api/presentations/:id': 'Reemplazar documento { document, baseRev? }',
       'DELETE /api/presentations/:id': 'Eliminar',
-      'POST /api/presentations/:id/commands': 'Aplicar comandos { commands: [...] }',
-      'GET /api/presentations/:id/events': 'Stream SSE de cambios',
+      'POST /api/presentations/:id/commands': 'Aplicar comandos { commands: [...] } · cabecera opcional x-lumen-agent: Nombre (aparece como colaborador)',
+      'GET /api/presentations/:id/events': 'Stream SSE de cambios, presencia y comentarios',
+      'GET/POST /api/presentations/:id/comments': 'Comentarios { slideId, elementId?, x, y, text, author }',
+      'POST /api/presentations/:id/comments/:cid/replies': 'Responder { text, author, resolve? }',
+      'PATCH /api/presentations/:id/comments/:cid': 'Resolver / editar { resolved, text }',
+      'POST /api/presentations/:id/presence': 'Publicar presencia { clientId, name, color, slideId, cursor, selection }',
       'GET /api/presentations/:id/history': 'Versiones guardadas',
       'POST /api/presentations/:id/history': 'Guardar versión { label? }',
       'GET /api/presentations/:id/history/:vid': 'Documento de una versión',
@@ -117,12 +134,44 @@ app.delete(
   }),
 );
 
+/**
+ * Un agente externo (REST o MCP) puede identificarse con la cabecera
+ * «x-lumen-agent: Nombre»: aparece como colaborador en el editor, en la
+ * diapositiva y el elemento que está tocando.
+ */
+function announceAgent(req: Request, docId: string, result: Awaited<ReturnType<typeof store.apply>>) {
+  let name = String(req.header('x-lumen-agent') ?? '');
+  try {
+    name = decodeURIComponent(name);
+  } catch {
+    /* se usa tal cual */
+  }
+  name = name.trim().slice(0, 40);
+  if (!name) return;
+  const touched = [...result.results].reverse().find((r) => r.ok && r.id)?.id;
+  const slide =
+    result.doc.slides.find((s) => s.id === touched) ?? result.doc.slides.find((s) => s.elements.some((e) => e.id === touched));
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'agente';
+  updatePresence(docId, {
+    clientId: `agent_${slug}`,
+    name,
+    color: '#d97757',
+    kind: 'ai',
+    slideId: slide?.id ?? result.doc.slides[0]?.id ?? '',
+    selection: touched && slide && slide.id !== touched ? [touched] : [],
+    cursor: null,
+    editing: null,
+    expires: Date.now() + 20000,
+  });
+}
+
 app.post(
   '/api/presentations/:id/commands',
   wrap(async (req, res) => {
     const commands = Array.isArray(req.body) ? req.body : req.body?.commands;
     if (!Array.isArray(commands)) return res.status(400).json({ error: 'Se esperaba { commands: [...] }' });
     const result = await store.apply(param(req, 'id'), commands, origin(req));
+    announceAgent(req, param(req, 'id'), result);
     res.json({
       results: result.results,
       rev: result.doc.rev,
@@ -161,6 +210,7 @@ app.post(
 
 app.get('/api/presentations/:id/events', (req, res) => {
   const id = param(req, 'id');
+  const client = typeof req.query.client === 'string' ? req.query.client : '';
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -168,14 +218,57 @@ app.get('/api/presentations/:id/events', (req, res) => {
     'X-Accel-Buffering': 'no',
   });
   res.write(`event: ready\ndata: {}\n\n`);
-  const onDoc = (e: DocEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  const send = (payload: unknown) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  const onDoc = (e: DocEvent) => send(e);
+  const onPresence = (users: Presence[]) => send({ type: 'presence', users });
+  const onComments = (comments: Comment[]) => send({ type: 'comments', comments });
   store.on(`doc:${id}`, onDoc);
+  collab.on(`presence:${id}`, onPresence);
+  collab.on(`comments:${id}`, onComments);
+  // Estado inicial de colaboración.
+  send({ type: 'presence', users: listPresence(id) });
+  listComments(id).then((comments) => send({ type: 'comments', comments })).catch(() => {});
   const ping = setInterval(() => res.write(`: ping\n\n`), 20000);
   req.on('close', () => {
     clearInterval(ping);
     store.off(`doc:${id}`, onDoc);
+    collab.off(`presence:${id}`, onPresence);
+    collab.off(`comments:${id}`, onComments);
+    if (client) removePresence(id, client);
   });
 });
+
+/* ---------- Colaboración ---------- */
+app.post('/api/presentations/:id/presence', (req, res) => {
+  const b = (req.body ?? {}) as Partial<Presence>;
+  if (!b.clientId) return res.status(400).json({ error: 'Falta clientId' });
+  updatePresence(param(req, 'id'), {
+    clientId: String(b.clientId),
+    name: String(b.name ?? 'Invitado').slice(0, 40),
+    color: /^#[0-9a-f]{3,8}$/i.test(String(b.color)) ? String(b.color) : '#7c5cff',
+    kind: 'human',
+    slideId: String(b.slideId ?? '').slice(0, 64),
+    cursor: b.cursor && typeof b.cursor.x === 'number' && typeof b.cursor.y === 'number' ? { x: b.cursor.x, y: b.cursor.y } : null,
+    selection: Array.isArray(b.selection) ? b.selection.slice(0, 50).map(String) : [],
+    editing: b.editing ? String(b.editing) : null,
+  });
+  res.status(204).end();
+});
+app.get('/api/presentations/:id/presence', (req, res) => res.json(listPresence(param(req, 'id'))));
+app.get('/api/presentations/:id/comments', wrap(async (req, res) => res.json(await listComments(param(req, 'id')))));
+app.post('/api/presentations/:id/comments', wrap(async (req, res) => res.status(201).json(await addComment(param(req, 'id'), req.body ?? {}))));
+app.post(
+  '/api/presentations/:id/comments/:cid/replies',
+  wrap(async (req, res) => res.status(201).json(await replyComment(param(req, 'id'), param(req, 'cid'), req.body ?? {}))),
+);
+app.patch('/api/presentations/:id/comments/:cid', wrap(async (req, res) => res.json(await patchComment(param(req, 'id'), param(req, 'cid'), req.body ?? {}))));
+app.delete(
+  '/api/presentations/:id/comments/:cid',
+  wrap(async (req, res) => {
+    await deleteComment(param(req, 'id'), param(req, 'cid'));
+    res.status(204).end();
+  }),
+);
 
 /* ---------- Video MP4 de estudio ---------- */
 app.get('/api/video/capabilities', (_req, res) => res.json(videoCapabilities()));

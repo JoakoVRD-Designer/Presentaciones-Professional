@@ -3,6 +3,7 @@ import type { Command } from '../../core/commands';
 import { useEditor } from '../store/editor';
 import { CLIP_PREFIX, copySelection, duplicateSlide, exportHtml, exportPdf, insertElement, pasteElements, present } from './actions';
 import { mediaSize, uploadAsset } from './assets';
+import { toggleCommentMode } from './collab';
 import { sfx } from './sound';
 
 function isTyping(t: EventTarget | null) {
@@ -122,8 +123,15 @@ export function useShortcuts() {
       }
 
       if (e.key === 'Escape') {
-        if (st.aiOpen) st.set({ aiOpen: false });
+        if (st.commentDraft || st.openComment) st.set({ commentDraft: null, openComment: null });
+        else if (st.commentMode) toggleCommentMode(false);
+        else if (st.aiOpen) st.set({ aiOpen: false });
         else st.select([]);
+        return;
+      }
+      if (!mod && !e.altKey && key === 'c') {
+        e.preventDefault();
+        toggleCommentMode();
         return;
       }
 
