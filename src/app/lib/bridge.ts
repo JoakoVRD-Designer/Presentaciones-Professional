@@ -8,7 +8,7 @@
 import { API_GUIDE, commandJsonSchema, summarizePresentation, type Command } from '../../core/commands';
 import { LAYOUTS } from '../../core/layouts';
 import { THEMES } from '../../core/themes';
-import { buildStandaloneHtml } from '../../render/exportHtml';
+import { buildPrintHtml, buildStandaloneHtml } from '../../render/exportHtml';
 import { useEditor, currentSlideIndex } from '../store/editor';
 
 export interface LumenBrowserApi {
@@ -27,6 +27,8 @@ export interface LumenBrowserApi {
   present: (fromIndex?: number) => void;
   stopPresenting: () => void;
   exportHtml: () => Promise<string>;
+  /** HTML paginado (una diapositiva por página) listo para imprimir/convertir a PDF. */
+  printHtml: () => string;
   on: (event: 'change', cb: (doc: unknown) => void) => () => void;
 }
 
@@ -56,6 +58,7 @@ export function installBridge() {
     present: (fromIndex) => useEditor.setState({ presenting: { start: fromIndex ?? currentSlideIndex() } }),
     stopPresenting: () => useEditor.setState({ presenting: null }),
     exportHtml: () => buildStandaloneHtml(useEditor.getState().doc),
+    printHtml: () => buildPrintHtml(useEditor.getState().doc),
     on: (_event, cb) => useEditor.subscribe((s, p) => s.doc !== p.doc && cb(s.doc)),
   };
   window.lumen = api;

@@ -27,7 +27,9 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
   rotar (⇧ = pasos de 15°), selección múltiple y por marco, **guías inteligentes** de alineación,
   menú contextual, copiar/pegar entre pestañas, soltar o pegar imágenes y videos.
 - Elementos: texto enriquecido (doble clic para editar), imagen, video, 12 formas, 2000+ iconos
-  Lucide e incrustaciones web (YouTube/Vimeo se convierten solas).
+  Lucide, incrustaciones web (YouTube/Vimeo se convierten solas) y **gráficos animados** (columnas,
+  barras, líneas, área, dona y tarta) con tabla editable y pegado directo desde Excel / Sheets.
+- **Panel de capas**: reordenar arrastrando, ocultar, bloquear y renombrar.
 - Estilo por elemento: relleno sólido o degradado, bordes, radio, sombras, **resplandor**,
   **vidrio (backdrop blur)**, desenfoque, brillo, contraste, saturación, tono, sepia, inversión,
   modos de fusión, máscaras de desvanecido, texto con degradado y contorno.
@@ -51,7 +53,8 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
 - **Vista del orador** en una segunda ventana: diapositiva actual y siguiente, notas ampliables,
   cronómetro y control remoto, sincronizada en vivo con la presentación.
 - Exporta un **único archivo HTML autónomo** (los recursos locales se incrustan) que funciona en
-  cualquier navegador, y JSON. También importa ambos formatos.
+  cualquier navegador, **PDF** (una página 16:9 por diapositiva, vía «Guardar como PDF») y JSON.
+  También importa HTML y JSON.
 
 ## Atajos
 
@@ -66,7 +69,8 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
 | Flechas | Mover 1 px (⇧ = 10 px) · sin selección, cambia de diapositiva |
 | [ · ] | Enviar atrás · traer adelante (con ⌘: al fondo / al frente) |
 | ↵ | Editar el texto seleccionado |
-| ⌘E · ⌘O | Exportar HTML · mis presentaciones |
+| ⌘E · ⌘P · ⌘O | Exportar HTML · exportar PDF · mis presentaciones |
+| ? | Todos los atajos |
 
 ---
 
@@ -96,12 +100,15 @@ pueden deshacer con ⌘Z).
 
 Operaciones: `presentation.update`, `theme.set`, `slide.add` / `update` / `delete` /
 `duplicate` / `move` / `background` / `transition`, `slides.clear`, `element.add` / `update` /
-`style` / `animate` / `delete` / `duplicate` / `arrange` / `align` / `move`, `document.replace`.
+`style` / `animate` / `delete` / `duplicate` / `arrange` / `order` / `align` / `move`,
+`document.replace`.
 Cada comando devuelve `{ ok, op, id, error }`; si uno falla, el resto continúa.
 
 Plantillas de diapositiva (`layout`): `title`, `section`, `bullets`, `two-column`, `image-left`,
-`image-right`, `quote`, `stats`, `features`, `timeline`, `video-hero`, `big-number`, `closing`,
-`blank`.
+`image-right`, `quote`, `stats`, `features`, `timeline`, `chart`, `video-hero`, `big-number`,
+`closing`, `blank`.
+
+Gráfico: `{ "type": "chart", "chart": "area", "labels": ["Ene","Feb"], "series": [{ "name": "Ventas", "values": [10, 18] }], "suffix": "k" }`.
 
 ### REST (`npm run dev`, puerto 4317)
 
@@ -149,6 +156,7 @@ Herramientas: `lumen_guide`, `list_presentations`, `create_presentation`, `get_p
 window.lumen.apply([{ op: 'slide.add', layout: 'closing', content: { title: '¡Gracias!' } }]);
 window.lumen.getSummary();   // resumen compacto con ids
 window.lumen.schema();       // JSON Schema de comandos
+window.lumen.printHtml();    // HTML paginado para generar un PDF (p. ej. con Playwright page.pdf)
 // Desde un iframe anfitrión:
 frame.contentWindow.postMessage({ type: 'lumen:command', id: 1, commands: [...] }, '*');
 ```

@@ -3,6 +3,7 @@ import { useCurrentSlide, useEditor, type Panel } from '../../store/editor';
 import { sfx } from '../../lib/sound';
 import { AnimationInspector } from './AnimationInspector';
 import { ElementInspector } from './ElementInspector';
+import { LayersPanel } from './LayersPanel';
 import { SlideInspector } from './SlideInspector';
 import { ThemeInspector } from './ThemeInspector';
 
@@ -17,11 +18,13 @@ export function Inspector() {
     ? [
         { id: 'design', label: 'Diseño' },
         { id: 'animation', label: 'Animación' },
-        { id: 'slide', label: 'Diapositiva' },
+        { id: 'slide', label: 'Diapo.' },
+        { id: 'layers', label: 'Capas' },
       ]
     : [
         { id: 'slide', label: 'Diapositiva' },
         { id: 'theme', label: 'Tema' },
+        { id: 'layers', label: 'Capas' },
       ];
   const active = tabs.some((t) => t.id === panel) ? panel : tabs[0].id;
 
@@ -46,7 +49,7 @@ export function Inspector() {
       </nav>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={`${active}:${hasSel ? elements.map((e) => e.id).join(',') : 'none'}`}
+          key={active === 'layers' ? 'layers' : `${active}:${hasSel ? elements.map((e) => e.id).join(',') : 'none'}`}
           className="inspector-body"
           initial={{ opacity: 0, x: 8 }}
           animate={{ opacity: 1, x: 0 }}
@@ -57,6 +60,7 @@ export function Inspector() {
           {active === 'animation' && hasSel && <AnimationInspector elements={elements} />}
           {active === 'slide' && <SlideInspector />}
           {active === 'theme' && <ThemeInspector />}
+          {active === 'layers' && <LayersPanel />}
         </motion.div>
       </AnimatePresence>
     </aside>

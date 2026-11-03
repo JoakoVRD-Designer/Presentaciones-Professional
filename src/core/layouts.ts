@@ -30,6 +30,16 @@ export const LayoutContentSchema = z
       )
       .optional()
       .describe('Tarjetas / hitos (máx. 5).'),
+    chart: z
+      .object({
+        kind: z.enum(['column', 'bar', 'line', 'area', 'donut', 'pie']).optional(),
+        labels: z.array(z.string()),
+        series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })),
+        prefix: z.string().optional(),
+        suffix: z.string().optional(),
+      })
+      .optional()
+      .describe('Datos para la plantilla "chart".'),
     columns: z
       .array(z.object({ title: z.string(), body: z.string() }))
       .optional()
@@ -766,6 +776,83 @@ export const LAYOUTS: LayoutDef[] = [
         }),
       ],
     }),
+  },
+  {
+    id: 'chart',
+    name: 'Gráfico',
+    description: 'Título, texto breve y un gráfico animado (usar content.chart con labels y series).',
+    build: (c) => {
+      const ch = c.chart ?? {
+        kind: 'column' as const,
+        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+        series: [{ name: 'Ingresos', values: [24, 38, 47, 72] }],
+      };
+      const circular = ch.kind === 'donut' || ch.kind === 'pie';
+      return {
+        name: 'Gráfico',
+        background: { type: 'effect', effect: 'grid', vignette: 0.45 },
+        transition: { type: 'slide' },
+        elements: [
+          ...kicker(c.kicker, M, 150),
+          T(c.title ?? 'Crecimiento sostenido', {
+            name: 'Título',
+            role: 'heading',
+            x: M,
+            y: 200,
+            w: 620,
+            h: 260,
+            size: 72,
+            weight: 700,
+            lineHeight: 1.05,
+            letterSpacing: -2,
+            animation: anim('fade-up'),
+          }),
+          T(c.body ?? c.subtitle ?? '', {
+            name: 'Texto',
+            x: M,
+            y: 500,
+            w: 600,
+            h: 300,
+            size: 30,
+            lineHeight: 1.5,
+            color: 'var(--lm-muted)',
+            animation: anim('fade-up', 250),
+          }),
+          {
+            type: 'shape',
+            name: 'Panel',
+            x: 820,
+            y: 150,
+            w: 960,
+            h: 780,
+            style: {
+              fill: 'var(--lm-surface)',
+              radius: 32,
+              backdropBlur: 24,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.12)',
+            },
+            animation: anim('fade', 100),
+          } as ElementInput,
+          {
+            type: 'chart',
+            name: 'Gráfico',
+            chart: ch.kind ?? 'column',
+            labels: ch.labels,
+            series: ch.series.map((s) => ({ ...s, color: '' })),
+            prefix: ch.prefix ?? '',
+            suffix: ch.suffix ?? '',
+            showLegend: ch.series.length > 1 || circular,
+            x: 880,
+            y: 210,
+            w: 840,
+            h: 660,
+            fontSize: 24,
+            animation: anim('fade', 200),
+          } as ElementInput,
+        ],
+      };
+    },
   },
   {
     id: 'closing',

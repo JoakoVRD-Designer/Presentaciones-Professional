@@ -25,6 +25,14 @@ import {
   Square,
   FileCode2,
   MonitorSpeaker,
+  ChartColumn,
+  ChartBarBig,
+  ChartLine,
+  ChartArea,
+  Donut,
+  ChartPie,
+  Printer,
+  Keyboard,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -32,9 +40,11 @@ import { CLIP_SHAPES } from '../../render/styles';
 import {
   exportHtml,
   exportJson,
+  exportPdf,
   importJson,
   insertElement,
   insertGlassCard,
+  insertChart,
   insertIcon,
   insertMedia,
   insertShape,
@@ -273,6 +283,37 @@ export function TopBar() {
             />
           )}
         </InsertButton>
+        <InsertButton icon={ChartColumn} label="Gráfico" width={300}>
+          {(close) => (
+            <div className="pop-pad">
+              <div className="chart-kinds">
+                {(
+                  [
+                    ['column', 'Columnas', ChartColumn],
+                    ['bar', 'Barras', ChartBarBig],
+                    ['line', 'Líneas', ChartLine],
+                    ['area', 'Área', ChartArea],
+                    ['donut', 'Dona', Donut],
+                    ['pie', 'Tarta', ChartPie],
+                  ] as const
+                ).map(([k, label, Icon]) => (
+                  <button
+                    key={k}
+                    className="chart-kind"
+                    onClick={() => {
+                      insertChart(k);
+                      close();
+                    }}
+                  >
+                    <Icon size={20} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="hint">Edita los datos en el inspector o pega una tabla desde Excel / Sheets.</p>
+            </div>
+          )}
+        </InsertButton>
         <InsertButton icon={Globe} label="Web" width={300}>
           {(close) => (
             <div className="pop-pad">
@@ -330,10 +371,12 @@ export function TopBar() {
               onDone={close}
               items={[
                 { label: 'HTML autónomo (.html)', icon: <FileCode2 size={14} />, kbd: '⌘E', onSelect: exportHtml },
+                { label: 'PDF (imprimir)', icon: <Printer size={14} />, kbd: '⌘P', onSelect: exportPdf },
                 { label: 'Documento Lumen (.json)', icon: <FileJson size={14} />, onSelect: exportJson },
                 'sep',
                 { label: 'Importar JSON / HTML…', icon: <FileUp size={14} />, onSelect: importJson },
                 { label: 'Mis presentaciones', icon: <FolderOpen size={14} />, kbd: '⌘O', onSelect: () => useEditor.setState({ docsOpen: true }) },
+                { label: 'Atajos de teclado', icon: <Keyboard size={14} />, kbd: '?', onSelect: () => useEditor.setState({ helpOpen: true }) },
               ]}
             />
           )}

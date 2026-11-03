@@ -6,6 +6,7 @@ import slideCss from '../runtime/slide.css?raw';
 import playerCss from '../runtime/player.css?raw';
 import playerJs from '../runtime/player.js?raw';
 import { Deck } from './Deck';
+import { SlideRenderer } from './SlideRenderer';
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -113,4 +114,54 @@ export function slugify(s: string): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '') || 'presentacion'
   );
+}
+
+/** HTML con una página por diapositiva (estado final, sin animaciones) para imprimir o guardar como PDF. */
+export function buildPrintHtml(doc: Presentation): string {
+  const pages = doc.slides
+    .filter((s) => !s.hidden)
+    .map(
+      (slide) =>
+        `<section class="page">${renderToStaticMarkup(
+          createElement(SlideRenderer, { slide, theme: doc.theme, width: doc.width, height: doc.height, mode: 'thumb' }),
+        )}</section>`,
+    )
+    .join('\n');
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title>
+<link rel="stylesheet" href="${GOOGLE_FONTS_URL}">
+<style>
+@page { size: ${doc.width}px ${doc.height}px; margin: 0; }
+html, body { margin: 0; background: #000; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: ${doc.width}px; height: ${doc.height}px; overflow: hidden; position: relative; break-after: page; page-break-after: always; }
+.page:last-child { break-after: auto; page-break-after: auto; }
+.lm-fx, .lm-fx *, .lm-bg-grain, .lm-kenburns { animation-play-state: paused !important; }
+${slideCss}
+</style></head><body>${pages}</body></html>`;
+}
+
+/** Abre el diálogo de impresión (permite «Guardar como PDF»). */
+export async function printDocument(doc: Presentation): Promise<void> {
+  const html = buildPrintHtml(await inlineLocalAssets(doc, false));
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  Object.assign(frame.style, { position: 'fixed', left: '-10000px', top: '0', width: `${doc.width}px`, height: `${doc.height}px`, border: '0' });
+  document.body.appendChild(frame);
+  const win = frame.contentWindow!;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  // Espera fuentes e imágenes (con límite) antes de imprimir.
+  await Promise.race([
+    Promise.all([
+      win.document.fonts?.ready,
+      ...Array.from(win.document.images).map((img) => (img.complete ? null : new Promise((r) => (img.onload = img.onerror = r)))),
+    ]),
+    new Promise((r) => setTimeout(r, 4000)),
+  ]);
+  await new Promise((r) => setTimeout(r, 300));
+  win.focus();
+  win.print();
+  setTimeout(() => frame.remove(), 1500);
 }

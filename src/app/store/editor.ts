@@ -3,7 +3,7 @@ import { applyCommands, type Command, type CommandResult } from '../../core/comm
 import type { Presentation, Slide, SlideElement } from '../../core/model';
 import { createFromTemplate } from '../../core/templates';
 
-export type Panel = 'design' | 'animation' | 'slide' | 'theme';
+export type Panel = 'design' | 'animation' | 'slide' | 'theme' | 'layers';
 export type SyncStatus = 'connecting' | 'saved' | 'saving' | 'error' | 'local';
 
 export interface Toast {
@@ -39,6 +39,7 @@ interface EditorState {
   paletteOpen: boolean;
   presenting: null | { start: number };
   docsOpen: boolean;
+  helpOpen: boolean;
   liveAnimations: boolean;
   sounds: boolean;
   sync: SyncStatus;
@@ -110,6 +111,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   paletteOpen: false,
   presenting: null,
   docsOpen: false,
+  helpOpen: false,
   liveAnimations: readPref('live', true),
   sounds: readPref('sounds', true),
   sync: 'connecting',
@@ -186,14 +188,24 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   selectSlide: (id) => {
     if (id === get().currentSlideId) return;
-    set({ currentSlideId: id, selection: [], editingId: null, panel: get().panel === 'theme' ? 'theme' : 'slide' });
+    const panel = get().panel;
+    set({ currentSlideId: id, selection: [], editingId: null, panel: panel === 'theme' || panel === 'layers' ? panel : 'slide' });
   },
   select: (ids) => {
     const panel = get().panel;
     set({
       selection: ids,
       editingId: null,
-      panel: ids.length ? (panel === 'animation' ? 'animation' : 'design') : panel === 'theme' ? 'theme' : 'slide',
+      panel:
+        panel === 'layers'
+          ? 'layers'
+          : ids.length
+            ? panel === 'animation'
+              ? 'animation'
+              : 'design'
+            : panel === 'theme'
+              ? 'theme'
+              : 'slide',
     });
   },
   toggleSelect: (id) => {

@@ -5,6 +5,7 @@ import { AIPanel } from './components/AIPanel';
 import { Canvas } from './components/Canvas';
 import { CommandPalette } from './components/CommandPalette';
 import { DocsDialog } from './components/DocsDialog';
+import { HelpDialog } from './components/HelpDialog';
 import { Inspector } from './components/inspector/Inspector';
 import { PresentMode } from './components/PresentMode';
 import { SlideRail } from './components/SlideRail';
@@ -71,6 +72,7 @@ export function App() {
       <StatusBar />
       <CommandPalette />
       <DocsDialog />
+      <HelpDialog />
       <PresentMode />
       <Toaster />
     </div>

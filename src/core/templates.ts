@@ -56,6 +56,24 @@ const showcase: Command[] = [
   },
   {
     op: 'slide.add',
+    layout: 'chart',
+    content: {
+      kicker: 'Datos',
+      title: 'Gráficos que se animan',
+      body: 'Columnas, barras, líneas, áreas, donas y tartas. Pega tus datos desde Excel o Sheets.',
+      chart: {
+        kind: 'area',
+        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+        series: [
+          { name: 'Usuarios', values: [12, 19, 17, 28, 36, 49] },
+          { name: 'Ingresos', values: [6, 9, 12, 15, 22, 31] },
+        ],
+        suffix: 'k',
+      },
+    },
+  },
+  {
+    op: 'slide.add',
     layout: 'bullets',
     content: {
       kicker: 'Builds',

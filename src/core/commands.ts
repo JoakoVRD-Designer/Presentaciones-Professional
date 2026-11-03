@@ -126,6 +126,14 @@ export const CommandSchema = z.discriminatedUnion('op', [
     .describe('Cambia el orden de capas.'),
   z
     .object({
+      op: z.literal('element.order'),
+      element: ElementRef,
+      slide: SlideRef.optional(),
+      index: z.number().int().describe('Nueva posición en el orden de capas (0 = al fondo).'),
+    })
+    .describe('Coloca el elemento en una posición exacta del orden de capas.'),
+  z
+    .object({
       op: z.literal('element.align'),
       element: ElementRef,
       slide: SlideRef.optional(),
@@ -374,6 +382,12 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
       list.splice(to, 0, el);
       return el.id;
     }
+    case 'element.order': {
+      const { slide, index } = findElement(draft, cmd.element, cmd.slide);
+      const [el] = slide.elements.splice(index, 1);
+      slide.elements.splice(Math.max(0, Math.min(cmd.index, slide.elements.length)), 0, el);
+      return el.id;
+    }
     case 'element.align': {
       const { slide, index } = findElement(draft, cmd.element, cmd.slide);
       const el = slide.elements[index];
@@ -488,6 +502,7 @@ export function summarizePresentation(doc: Presentation): unknown {
         ...(e.type === 'image' || e.type === 'video' ? { src: e.src } : {}),
         ...(e.type === 'icon' ? { icon: e.icon } : {}),
         ...(e.type === 'shape' ? { shape: e.shape, fill: e.style.fill } : {}),
+        ...(e.type === 'chart' ? { chart: e.chart, labels: e.labels, series: e.series.map((s) => ({ name: s.name, values: s.values })) } : {}),
         entrance: e.animation.entrance,
         step: e.animation.step || undefined,
       })),
@@ -523,6 +538,8 @@ Cada comando devuelve { ok, op, id, error }. Si uno falla los demás continúan.
 - Vidrio (glassmorphism): style { fill: "rgba(255,255,255,0.08)", backdropBlur: 24,
   borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", radius: 28 }.
 - Texto con degradado: text.gradient = "linear-gradient(...)".
+- Gráficos: element.add con { type: "chart", chart: "column"|"bar"|"line"|"area"|"donut"|"pie",
+  labels: [...], series: [{ name, values: [...] }], prefix, suffix }, o la plantilla "chart".
 - Iconos: nombres Lucide en PascalCase (Rocket, Sparkles, ChartLine, Users, Globe,
   ShieldCheck, Zap, BrainCircuit, Target, Lightbulb, Heart, Star, TrendingUp...).
 - Mantén márgenes de ~140 px y buen contraste.

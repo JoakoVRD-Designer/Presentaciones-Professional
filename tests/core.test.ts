@@ -166,3 +166,29 @@ describe('fusión a tres bandas', () => {
     expect(merge3(base, removed, remote).slides[0].elements.some((e) => e.id === eid)).toBe(false);
   });
 });
+
+describe('gráficos y capas', () => {
+  it('crea gráficos con valores por defecto y la plantilla chart', () => {
+    const { doc, results } = applyCommands(blank(), [
+      { op: 'slide.add', layout: 'chart', content: { title: 'Ventas', chart: { kind: 'donut', labels: ['A', 'B'], series: [{ name: 'x', values: [1, 2] }] } } },
+      { op: 'element.add', slide: 0, element: { type: 'chart', id: 'c1' } },
+    ]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    const charts = doc.slides[0].elements.filter((e) => e.type === 'chart');
+    expect(charts).toHaveLength(2);
+    const c1 = charts.find((c) => c.id === 'c1')!;
+    expect(c1.type === 'chart' && c1.series[0].values.length).toBe(4);
+  });
+
+  it('element.order coloca una capa en una posición exacta', () => {
+    const { doc } = applyCommands(blank(), [
+      { op: 'slide.add' },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'a' } },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'b' } },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'c' } },
+      { op: 'element.order', element: 'c', index: 0 },
+      { op: 'element.order', element: 'a', index: 99 },
+    ]);
+    expect(doc.slides[0].elements.map((e) => e.id)).toEqual(['c', 'b', 'a']);
+  });
+});

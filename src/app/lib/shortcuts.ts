@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { Command } from '../../core/commands';
 import { useEditor } from '../store/editor';
-import { CLIP_PREFIX, copySelection, duplicateSlide, exportHtml, insertElement, pasteElements, present } from './actions';
+import { CLIP_PREFIX, copySelection, duplicateSlide, exportHtml, exportPdf, insertElement, pasteElements, present } from './actions';
 import { mediaSize, uploadAsset } from './assets';
 import { sfx } from './sound';
 
@@ -45,12 +45,21 @@ export function useShortcuts() {
         exportHtml();
         return;
       }
+      if (mod && key === 'p') {
+        e.preventDefault();
+        exportPdf();
+        return;
+      }
       if (mod && key === 'o') {
         e.preventDefault();
         st.set({ docsOpen: true });
         return;
       }
-      if (isTyping(e.target) || st.paletteOpen || st.docsOpen) return;
+      if (isTyping(e.target) || st.paletteOpen || st.docsOpen || st.helpOpen) return;
+      if (e.key === '?') {
+        st.set({ helpOpen: true });
+        return;
+      }
 
       const slide = st.doc.slides.find((s) => s.id === st.currentSlideId);
       const sel = slide?.elements.filter((x) => st.selection.includes(x.id)) ?? [];

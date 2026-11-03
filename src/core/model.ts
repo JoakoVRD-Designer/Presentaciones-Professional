@@ -115,7 +115,9 @@ export const BLEND_MODES = [
 
 export const MASKS = ['none', 'fade-bottom', 'fade-top', 'fade-left', 'fade-right', 'fade-edges', 'circle'] as const;
 
-export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed'] as const;
+export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart'] as const;
+
+export const CHART_KINDS = ['bar', 'column', 'line', 'area', 'donut', 'pie'] as const;
 
 /* ------------------------------------------------------------------ */
 /* Piezas reutilizables                                                */
@@ -284,6 +286,37 @@ export const EmbedElementSchema = z
   })
   .describe('Contenido web incrustado (iframe).');
 
+export const ChartSeriesSchema = z.object({
+  name: z.string().default('Serie'),
+  values: z.array(z.number()).default([]),
+  color: z.string().default('').describe('Color de la serie; vacío = paleta del tema.'),
+});
+
+export const ChartElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('chart'),
+    chart: z
+      .enum(CHART_KINDS)
+      .default('column')
+      .describe('column = barras verticales, bar = horizontales, line, area, donut, pie.'),
+    labels: z.array(z.string()).default(['Ene', 'Feb', 'Mar', 'Abr']).describe('Categorías (eje X o sectores).'),
+    series: z
+      .array(ChartSeriesSchema)
+      .default([{ name: 'Serie 1', values: [12, 19, 14, 26], color: '' }])
+      .describe('Una o más series; en donut/pie solo se usa la primera.'),
+    showValues: z.boolean().default(true),
+    showGrid: z.boolean().default(true),
+    showLegend: z.boolean().default(false),
+    smooth: z.boolean().default(true).describe('Curvas suaves en line/area.'),
+    fontSize: num(22, 8, 80),
+    textColor: z.string().default('').describe('Color de etiquetas; vacío = color secundario del tema.'),
+    prefix: z.string().default('').describe('Prefijo de valores, p. ej. "$".'),
+    suffix: z.string().default('').describe('Sufijo de valores, p. ej. "%".'),
+    thickness: num(0.62, 0.1, 1).describe('Grosor relativo de barras / anillo.'),
+  })
+  .describe('Gráfico de datos animado (SVG).');
+
 export const ElementSchema = z.discriminatedUnion('type', [
   TextElementSchema,
   ImageElementSchema,
@@ -291,6 +324,7 @@ export const ElementSchema = z.discriminatedUnion('type', [
   ShapeElementSchema,
   IconElementSchema,
   EmbedElementSchema,
+  ChartElementSchema,
 ]);
 
 export const BackgroundSchema = z
@@ -406,7 +440,9 @@ export type VideoElement = WithId<z.infer<typeof VideoElementSchema>>;
 export type ShapeElement = WithId<z.infer<typeof ShapeElementSchema>>;
 export type IconElement = WithId<z.infer<typeof IconElementSchema>>;
 export type EmbedElement = WithId<z.infer<typeof EmbedElementSchema>>;
-export type SlideElement = TextElement | ImageElement | VideoElement | ShapeElement | IconElement | EmbedElement;
+export type ChartElement = WithId<z.infer<typeof ChartElementSchema>>;
+export type ChartKind = (typeof CHART_KINDS)[number];
+export type SlideElement = TextElement | ImageElement | VideoElement | ShapeElement | IconElement | EmbedElement | ChartElement;
 export type ElementType = SlideElement['type'];
 export type ElementInput = z.input<typeof ElementSchema>;
 export type Background = z.infer<typeof BackgroundSchema>;

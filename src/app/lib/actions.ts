@@ -1,6 +1,6 @@
 /** Acciones de alto nivel reutilizadas por la barra, la paleta de comandos y los atajos. */
 import { normalizePresentation, type ElementInput } from '../../core/model';
-import { buildStandaloneHtml, downloadFile, slugify } from '../../render/exportHtml';
+import { buildStandaloneHtml, downloadFile, printDocument, slugify } from '../../render/exportHtml';
 import { currentSlideIndex, useEditor } from '../store/editor';
 import { mediaSize, pickFile, uploadAsset } from './assets';
 import { sfx } from './sound';
@@ -123,6 +123,19 @@ export function insertGlassCard() {
   });
 }
 
+export const CHART_SAMPLES: Record<string, ElementInput> = {
+  column: { type: 'chart', chart: 'column', name: 'Gráfico de columnas', w: 1100, h: 600, labels: ['Q1', 'Q2', 'Q3', 'Q4'], series: [{ name: '2025', values: [32, 45, 51, 68] }, { name: '2026', values: [41, 58, 66, 89] }], showLegend: true },
+  bar: { type: 'chart', chart: 'bar', name: 'Gráfico de barras', w: 1100, h: 560, labels: ['Producto A', 'Producto B', 'Producto C', 'Producto D'], series: [{ name: 'Ventas', values: [86, 64, 47, 29] }], suffix: '%' },
+  line: { type: 'chart', chart: 'line', name: 'Gráfico de líneas', w: 1100, h: 560, labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'], series: [{ name: 'Usuarios', values: [12, 18, 16, 27, 34, 46] }], suffix: 'k' },
+  area: { type: 'chart', chart: 'area', name: 'Gráfico de área', w: 1100, h: 560, labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'], series: [{ name: 'Ingresos', values: [20, 26, 24, 38, 45, 61] }], prefix: '$', suffix: 'k' },
+  donut: { type: 'chart', chart: 'donut', name: 'Gráfico de dona', w: 760, h: 560, labels: ['Móvil', 'Escritorio', 'Tablet'], series: [{ name: 'Tráfico', values: [58, 34, 8] }], showLegend: true },
+  pie: { type: 'chart', chart: 'pie', name: 'Gráfico de tarta', w: 760, h: 560, labels: ['Norte', 'Sur', 'Este', 'Oeste'], series: [{ name: 'Región', values: [35, 25, 22, 18] }], showLegend: true },
+};
+
+export function insertChart(kind: string) {
+  insertElement({ ...(CHART_SAMPLES[kind] ?? CHART_SAMPLES.column), animation: { entrance: 'fade' } } as ElementInput);
+}
+
 export function insertIcon(icon: string) {
   insertElement({ type: 'icon', icon, name: icon, w: 160, h: 160, animation: { entrance: 'zoom-in', easing: 'spring', loop: 'float' } });
 }
@@ -183,6 +196,16 @@ export async function exportHtml() {
     s.toast('HTML exportado. Ábrelo en cualquier navegador.', 'success');
   } catch (err) {
     s.toast(err instanceof Error ? err.message : 'Error al exportar', 'error');
+  }
+}
+
+export async function exportPdf() {
+  const s = st();
+  try {
+    s.toast('Preparando PDF… elige «Guardar como PDF» en el diálogo de impresión.');
+    await printDocument(s.doc);
+  } catch (err) {
+    s.toast(err instanceof Error ? err.message : 'No se pudo imprimir', 'error');
   }
 }
 

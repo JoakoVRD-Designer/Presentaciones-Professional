@@ -28,6 +28,7 @@ import {
   Video,
   Globe,
   CaseUpper,
+  ChartColumn,
 } from 'lucide-react';
 import type { Command } from '../../../core/commands';
 import { SHAPES, BLEND_MODES, MASKS, type SlideElement } from '../../../core/model';
@@ -40,6 +41,7 @@ import { IconPicker } from '../IconPicker';
 import { IconButton } from '../ui/IconButton';
 import { ColorInput, Grid, NumberInput, Row, Section, Segmented, Select, Slider, Switch, TextInput } from '../ui/fields';
 import { Popover } from '../ui/Popover';
+import { ChartEditor } from './ChartEditor';
 import { BLEND_LABELS, MASK_LABELS, SHAPE_LABELS, toEmbedUrl, useElementPatch } from './common';
 
 const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type }> = {
@@ -49,6 +51,7 @@ const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type
   shape: { label: 'Forma', icon: Shapes },
   icon: { label: 'Icono', icon: Sparkles },
   embed: { label: 'Incrustado', icon: Globe },
+  chart: { label: 'Gráfico', icon: ChartColumn },
 };
 
 const SHADOWS: { id: string; label: string; value: null | { x: number; y: number; blur: number; spread: number; color: string } }[] = [
@@ -431,6 +434,8 @@ export function ElementInspector({ elements }: { elements: SlideElement[] }) {
           </Row>
         </Section>
       )}
+
+      {!multi && el.type === 'chart' && <ChartEditor el={el} patch={patch} />}
 
       {!multi && el.type === 'embed' && (
         <Section title="Contenido incrustado" id="el-embed">

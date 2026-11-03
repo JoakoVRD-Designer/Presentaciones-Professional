@@ -34,8 +34,10 @@ import {
   duplicateSlide,
   exportHtml,
   exportJson,
+  exportPdf,
   importJson,
   insertElement,
+  insertChart,
   insertGlassCard,
   insertMedia,
   insertShape,
@@ -124,6 +126,9 @@ export function CommandPalette() {
                     <Item key={s} icon={<Shapes size={15} />} label={`Forma: ${SHAPE_LABELS[s]}`} onSelect={() => insertShape(s)} />
                   ))}
                   <Item icon={<Shapes size={15} />} label="Tarjeta de vidrio" onSelect={insertGlassCard} keywords={['glass']} />
+                  {['column', 'bar', 'line', 'area', 'donut', 'pie'].map((k) => (
+                    <Item key={k} icon={<Shapes size={15} />} label={`Gráfico: ${k}`} onSelect={() => insertChart(k)} keywords={['chart', 'grafico', 'datos']} />
+                  ))}
                   <Item icon={<ImageIcon size={15} />} label="Imagen desde archivo" onSelect={() => insertMedia('image')} />
                   <Item icon={<Film size={15} />} label="Video desde archivo" onSelect={() => insertMedia('video')} />
                 </Command.Group>
@@ -152,7 +157,9 @@ export function CommandPalette() {
                 </Command.Group>
                 <Command.Group heading="Archivo y preferencias">
                   <Item icon={<Download size={15} />} label="Exportar HTML autónomo" kbd="⌘E" onSelect={exportHtml} />
+                  <Item icon={<Download size={15} />} label="Exportar PDF (imprimir)" kbd="⌘P" onSelect={exportPdf} keywords={['pdf', 'imprimir', 'print']} />
                   <Item icon={<FileJson size={15} />} label="Exportar JSON" onSelect={exportJson} />
+                  <Item icon={<Wand2 size={15} />} label="Atajos de teclado" kbd="?" onSelect={() => useEditor.setState({ helpOpen: true })} keywords={['ayuda', 'help', 'shortcuts']} />
                   <Item icon={<FileUp size={15} />} label="Importar JSON / HTML" onSelect={importJson} />
                   <Item icon={<Volume2 size={15} />} label="Activar/desactivar sonidos" onSelect={toggleSounds} />
                   <Item icon={<Wand2 size={15} />} label="Activar/desactivar animaciones en vivo" onSelect={toggleLive} />
