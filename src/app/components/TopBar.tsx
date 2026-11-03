@@ -24,6 +24,7 @@ import {
   ZoomIn,
   Square,
   FileCode2,
+  MonitorSpeaker,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -42,6 +43,7 @@ import {
   toggleLive,
   toggleSounds,
 } from '../lib/actions';
+import { openPresenterWindow } from '../lib/presenter';
 import { sfx } from '../lib/sound';
 import { useEditor } from '../store/editor';
 import { IconPicker } from './IconPicker';
@@ -351,6 +353,7 @@ export function TopBar() {
           <AnimatedIcon icon={Sparkles} anim="spin" size={15} />
           <span>IA</span>
         </motion.button>
+        <IconButton icon={MonitorSpeaker} label="Vista del orador (otra ventana)" anim="pop" onClick={openPresenterWindow} />
         <motion.button className="present-btn" onClick={() => present()} whileHover={{ y: -1 }} whileTap={{ scale: 0.96 }} data-tip="Presentar  ⌘↵">
           <Play size={14} fill="currentColor" />
           <span>Presentar</span>

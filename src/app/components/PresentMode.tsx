@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Deck } from '../../render/Deck';
 import { createPlayer } from '../../runtime/player.js';
+import { publishPlayerState, setActivePlayer } from '../lib/presenter';
 import { useEditor } from '../store/editor';
 
 export function PresentMode() {
@@ -29,12 +30,15 @@ export function PresentMode() {
       startIndex: presenting.start,
       exitButton: true,
       onExit: exit,
-      onChange: (i) => {
+      onChange: (i, step) => {
         const visible = frozen.slides.filter((s) => !s.hidden);
         const slide = visible[i];
         if (slide) useEditor.setState({ currentSlideId: slide.id, selection: [] });
+        const maxStep = Math.max(0, ...(slide?.elements.map((e) => e.animation.step) ?? [0]));
+        publishPlayerState(i, step, maxStep);
       },
     });
+    setActivePlayer(player);
     root.focus();
     host.current.requestFullscreen?.().catch(() => {});
     const onFs = () => {
@@ -46,6 +50,7 @@ export function PresentMode() {
       clearTimeout(t);
       document.removeEventListener('fullscreenchange', onFs);
       player.destroy();
+      setActivePlayer(null);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     };
   }, [presenting, frozen]);

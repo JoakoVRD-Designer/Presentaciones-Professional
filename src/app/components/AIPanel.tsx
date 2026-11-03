@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Bot, Check, CircleAlert, Copy, Square, Sparkles, Terminal, Plug, X } from 'lucide-react';
+import { ArrowUp, Bot, Check, CircleAlert, Copy, Square, Sparkles, Terminal, Plug, X, Eraser } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { API_GUIDE, commandJsonSchema, type CommandResult } from '../../core/commands';
@@ -319,6 +319,7 @@ export function AIPanel() {
   const [tab, setTab] = useState<'chat' | 'api'>('chat');
   const [available, setAvailable] = useState<boolean | null>(null);
   const serverMode = useEditor((s) => s.serverMode);
+  const hasMessages = useChat((s) => s.messages.length > 0);
 
   useEffect(() => {
     if (!open || !serverMode) return;
@@ -351,6 +352,9 @@ export function AIPanel() {
                 { value: 'api', label: 'API' },
               ]}
             />
+            {hasMessages && tab === 'chat' && (
+              <IconButton icon={Eraser} label="Nueva conversación" anim="wiggle" onClick={() => !useChat.getState().busy && setMessages([])} />
+            )}
             <IconButton icon={X} label="Cerrar" anim="spin" sound="close" onClick={() => useEditor.setState({ aiOpen: false })} />
           </header>
           <div className="ai-body">

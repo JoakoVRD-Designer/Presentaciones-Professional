@@ -4,12 +4,16 @@ import '../runtime/slide.css';
 import '../runtime/player.css';
 import './styles/app.css';
 import { App } from './App';
+import { PresenterView } from './components/PresenterView';
 import { installBridge } from './lib/bridge';
+import { installPresenterHost } from './lib/presenter';
 
-installBridge();
+const isPresenter = new URLSearchParams(window.location.search).has('presenter');
+if (!isPresenter) {
+  installBridge();
+  installPresenterHost();
+}
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <StrictMode>{isPresenter ? <PresenterView /> : <App />}</StrictMode>,
 );

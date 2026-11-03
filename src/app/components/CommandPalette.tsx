@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   Film,
   ArrowRight,
+  MonitorSpeaker,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -43,6 +44,7 @@ import {
   toggleLive,
   toggleSounds,
 } from '../lib/actions';
+import { openPresenterWindow } from '../lib/presenter';
 import { sfx } from '../lib/sound';
 import { useEditor } from '../store/editor';
 import { SHAPE_LABELS } from './inspector/common';
@@ -101,6 +103,7 @@ export function CommandPalette() {
                 <Command.Group heading="Acciones">
                   <Item icon={<Play size={15} />} label="Presentar desde aquí" kbd="⌘↵" onSelect={() => present()} />
                   <Item icon={<Play size={15} />} label="Presentar desde el inicio" onSelect={() => present(true)} />
+                  <Item icon={<MonitorSpeaker size={15} />} label="Abrir vista del orador" onSelect={openPresenterWindow} keywords={['presenter', 'notas']} />
                   <Item icon={<Sparkles size={15} />} label="Abrir asistente IA" kbd="⌘J" onSelect={() => useEditor.setState({ aiOpen: true })} keywords={['ai', 'claude', 'api']} />
                   <Item icon={<Undo2 size={15} />} label="Deshacer" kbd="⌘Z" onSelect={() => useEditor.getState().undo()} />
                   <Item icon={<Redo2 size={15} />} label="Rehacer" kbd="⇧⌘Z" onSelect={() => useEditor.getState().redo()} />
