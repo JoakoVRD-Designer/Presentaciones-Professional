@@ -29,7 +29,13 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
 - Elementos: texto enriquecido (doble clic para editar), imagen, video, 12 formas, 2000+ iconos
   Lucide, incrustaciones web (YouTube/Vimeo se convierten solas) y **gráficos animados** (columnas,
   barras, líneas, área, dona y tarta) con tabla editable y pegado directo desde Excel / Sheets.
-- **Panel de capas**: reordenar arrastrando, ocultar, bloquear y renombrar.
+- **Tablas** con encabezado, bandas y columna destacada (también se pegan desde Excel / Sheets).
+- **Panel de capas**: reordenar arrastrando, ocultar, bloquear y renombrar. **Agrupar** (⌘G) y
+  **distribuir** espaciado.
+- **Transición Morph (Magic Move)**: duplica una diapositiva, mueve o redimensiona sus elementos y
+  se animarán solos entre una y otra.
+- **Buscar y reemplazar** (⌘F) en textos, tablas, gráficos y notas, e **historial de versiones**
+  con instantáneas automáticas (también antes de cada cambio de una IA) y restauración.
 - Estilo por elemento: relleno sólido o degradado, bordes, radio, sombras, **resplandor**,
   **vidrio (backdrop blur)**, desenfoque, brillo, contraste, saturación, tono, sepia, inversión,
   modos de fusión, máscaras de desvanecido, texto con degradado y contorno.
@@ -50,11 +56,17 @@ Producción: `npm run build && npm start` (el servidor sirve la app compilada en
 **Presentación y exportación**
 - Modo presentación a pantalla completa: teclado, clic, gestos táctiles, notas del orador (N),
   pantalla negra (B), sonido (M), barra o puntos de progreso, avance automático y bucle.
+- **Vista general** (G) para saltar a cualquier diapositiva y **enlace para compartir** (visor de
+  solo lectura que se actualiza en vivo).
 - **Vista del orador** en una segunda ventana: diapositiva actual y siguiente, notas ampliables,
   cronómetro y control remoto, sincronizada en vivo con la presentación.
-- Exporta un **único archivo HTML autónomo** (los recursos locales se incrustan) que funciona en
+- Exporta a **PowerPoint (.pptx)** con texto, formas, tablas y gráficos nativos y editables, un
+  **único archivo HTML autónomo** (los recursos locales se incrustan) que funciona en
   cualquier navegador, **PDF** (una página 16:9 por diapositiva, vía «Guardar como PDF») y JSON.
   También importa HTML y JSON.
+
+Comparativa detallada con PowerPoint, Keynote, Google Slides, Canva, Pitch, Gamma y Figma
+Slides: [docs/COMPARATIVA.md](docs/COMPARATIVA.md).
 
 ## Atajos
 
@@ -101,7 +113,7 @@ pueden deshacer con ⌘Z).
 Operaciones: `presentation.update`, `theme.set`, `slide.add` / `update` / `delete` /
 `duplicate` / `move` / `background` / `transition`, `slides.clear`, `element.add` / `update` /
 `style` / `animate` / `delete` / `duplicate` / `arrange` / `order` / `align` / `move`,
-`document.replace`.
+`elements.group` / `ungroup` / `distribute`, `document.replace`.
 Cada comando devuelve `{ ok, op, id, error }`; si uno falla, el resto continúa.
 
 Plantillas de diapositiva (`layout`): `title`, `section`, `bullets`, `two-column`, `image-left`,
@@ -121,6 +133,8 @@ Gráfico: `{ "type": "chart", "chart": "area", "labels": ["Ene","Feb"], "series"
 | GET/PUT/DELETE | `/api/presentations/:id` | Leer (`?summary=1`), reemplazar, eliminar |
 | POST | `/api/presentations/:id/commands` | Aplicar `{ commands: [...] }` |
 | GET | `/api/presentations/:id/events` | Stream SSE de cambios |
+| GET/POST | `/api/presentations/:id/history` | Versiones · guardar versión |
+| POST | `/api/presentations/:id/history/:vid/restore` | Restaurar una versión |
 | POST | `/api/assets` | Subir imagen/video (cuerpo binario) → `/media/…` |
 | POST | `/api/ai/chat` | Asistente IA (stream SSE) |
 
@@ -156,6 +170,7 @@ Herramientas: `lumen_guide`, `list_presentations`, `create_presentation`, `get_p
 window.lumen.apply([{ op: 'slide.add', layout: 'closing', content: { title: '¡Gracias!' } }]);
 window.lumen.getSummary();   // resumen compacto con ids
 window.lumen.schema();       // JSON Schema de comandos
+window.lumen.exportPptx();   // Blob .pptx
 window.lumen.printHtml();    // HTML paginado para generar un PDF (p. ej. con Playwright page.pdf)
 // Desde un iframe anfitrión:
 frame.contentWindow.postMessage({ type: 'lumen:command', id: 1, commands: [...] }, '*');

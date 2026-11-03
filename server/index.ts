@@ -56,6 +56,10 @@ app.get('/api', (_req, res) => {
       'DELETE /api/presentations/:id': 'Eliminar',
       'POST /api/presentations/:id/commands': 'Aplicar comandos { commands: [...] }',
       'GET /api/presentations/:id/events': 'Stream SSE de cambios',
+      'GET /api/presentations/:id/history': 'Versiones guardadas',
+      'POST /api/presentations/:id/history': 'Guardar versión { label? }',
+      'GET /api/presentations/:id/history/:vid': 'Documento de una versión',
+      'POST /api/presentations/:id/history/:vid/restore': 'Restaurar versión',
       'POST /api/assets': 'Subir archivo (cuerpo binario, cabecera Content-Type)',
       'POST /api/ai/chat': 'Asistente IA { presentationId, prompt, history? } (stream SSE)',
     },
@@ -121,6 +125,34 @@ app.post(
       rev: result.doc.rev,
       presentation: req.query.full ? result.doc : summarizePresentation(result.doc),
     });
+  }),
+);
+
+app.get(
+  '/api/presentations/:id/history',
+  wrap(async (req, res) => res.json(await store.history(param(req, 'id')))),
+);
+app.post(
+  '/api/presentations/:id/history',
+  wrap(async (req, res) => {
+    const doc = await store.get(param(req, 'id'));
+    if (!doc) return res.status(404).json({ error: 'No encontrada' });
+    res.status(201).json(await store.snapshot(doc, origin(req).startsWith('client_') ? 'editor' : origin(req), String(req.body?.label ?? '')));
+  }),
+);
+app.get(
+  '/api/presentations/:id/history/:vid',
+  wrap(async (req, res) => {
+    const doc = await store.version(param(req, 'id'), param(req, 'vid'));
+    if (!doc) return res.status(404).json({ error: 'Versión no encontrada' });
+    res.json(doc);
+  }),
+);
+app.post(
+  '/api/presentations/:id/history/:vid/restore',
+  wrap(async (req, res) => {
+    const doc = await store.restore(param(req, 'id'), param(req, 'vid'), 'restore');
+    res.json({ rev: doc.rev });
   }),
 );
 

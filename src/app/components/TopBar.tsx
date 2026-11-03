@@ -35,6 +35,7 @@ import {
   Keyboard,
   Table2,
   Presentation,
+  Share2,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -44,6 +45,7 @@ import {
   exportJson,
   exportPdf,
   exportPptx,
+  shareLink,
   importJson,
   insertElement,
   insertGlassCard,
@@ -390,6 +392,8 @@ export function TopBar() {
                 'sep',
                 { label: 'Importar JSON / HTML…', icon: <FileUp size={14} />, onSelect: importJson },
                 { label: 'Mis presentaciones', icon: <FolderOpen size={14} />, kbd: '⌘O', onSelect: () => useEditor.setState({ docsOpen: true }) },
+                { label: 'Historial de versiones', icon: <FolderOpen size={14} />, onSelect: () => useEditor.setState({ historyOpen: true }) },
+                { label: 'Buscar y reemplazar', icon: <Keyboard size={14} />, kbd: '⌘F', onSelect: () => useEditor.setState({ findOpen: true }) },
                 { label: 'Atajos de teclado', icon: <Keyboard size={14} />, kbd: '?', onSelect: () => useEditor.setState({ helpOpen: true }) },
               ]}
             />
@@ -410,6 +414,7 @@ export function TopBar() {
           <AnimatedIcon icon={Sparkles} anim="spin" size={15} />
           <span>IA</span>
         </motion.button>
+        <IconButton icon={Share2} label="Copiar enlace para ver la presentación" anim="pop" sound={false} onClick={shareLink} />
         <IconButton icon={MonitorSpeaker} label="Vista del orador (otra ventana)" anim="pop" onClick={openPresenterWindow} />
         <motion.button className="present-btn" onClick={() => present()} whileHover={{ y: -1 }} whileTap={{ scale: 0.96 }} data-tip="Presentar  ⌘↵">
           <Play size={14} fill="currentColor" />

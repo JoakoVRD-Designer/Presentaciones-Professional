@@ -40,6 +40,8 @@ interface EditorState {
   presenting: null | { start: number };
   docsOpen: boolean;
   helpOpen: boolean;
+  findOpen: boolean;
+  historyOpen: boolean;
   liveAnimations: boolean;
   sounds: boolean;
   sync: SyncStatus;
@@ -112,6 +114,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   presenting: null,
   docsOpen: false,
   helpOpen: false,
+  findOpen: false,
+  historyOpen: false,
   liveAnimations: readPref('live', true),
   sounds: readPref('sounds', true),
   sync: 'connecting',

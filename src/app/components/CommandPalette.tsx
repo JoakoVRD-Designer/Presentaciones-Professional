@@ -37,6 +37,7 @@ import {
   exportJson,
   exportPdf,
   exportPptx,
+  shareLink,
   importJson,
   insertElement,
   insertChart,
@@ -112,6 +113,9 @@ export function CommandPalette() {
                   <Item icon={<Sparkles size={15} />} label="Abrir asistente IA" kbd="⌘J" onSelect={() => useEditor.setState({ aiOpen: true })} keywords={['ai', 'claude', 'api']} />
                   <Item icon={<Undo2 size={15} />} label="Deshacer" kbd="⌘Z" onSelect={() => useEditor.getState().undo()} />
                   <Item icon={<Redo2 size={15} />} label="Rehacer" kbd="⇧⌘Z" onSelect={() => useEditor.getState().redo()} />
+                  <Item icon={<Download size={15} />} label="Buscar y reemplazar" kbd="⌘F" onSelect={() => useEditor.setState({ findOpen: true })} keywords={['find', 'replace', 'buscar']} />
+                  <Item icon={<Download size={15} />} label="Copiar enlace para compartir" onSelect={shareLink} keywords={['share', 'compartir', 'publicar', 'link']} />
+                  <Item icon={<FolderOpen size={15} />} label="Historial de versiones" onSelect={() => useEditor.setState({ historyOpen: true })} keywords={['history', 'versiones', 'restaurar']} />
                   <Item icon={<FolderOpen size={15} />} label="Mis presentaciones" kbd="⌘O" onSelect={() => useEditor.setState({ docsOpen: true })} />
                 </Command.Group>
                 <Command.Group heading="Diapositivas">

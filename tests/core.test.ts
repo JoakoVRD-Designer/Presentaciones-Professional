@@ -233,3 +233,29 @@ describe('tablas, grupos y distribución', () => {
     expect(doc.slides[1].elements[0].id).not.toBe('orig');
   });
 });
+
+import { findAll, makeRegex, replaceAllCommands, replaceInHtml } from '../src/core/findReplace';
+
+describe('buscar y reemplazar', () => {
+  it('reemplaza solo texto, no etiquetas, en textos, tablas, gráficos y notas', () => {
+    expect(replaceInHtml('<b class="b">b</b> b', /b/g, 'X')).toBe('<b class="b">X</b> X');
+    const { doc } = applyCommands(blank(), [
+      { op: 'slide.add', slide: { notes: 'Hola mundo' } },
+      { op: 'element.add', slide: 0, element: { type: 'text', html: '<b>Hola</b> amigos' } },
+      { op: 'element.add', slide: 0, element: { type: 'table', rows: [['hola', 'x']] } },
+      { op: 'element.add', slide: 0, element: { type: 'chart', labels: ['Hola'], series: [{ name: 's', values: [1] }] } },
+    ]);
+    const re = makeRegex('hola', { caseSensitive: false })!;
+    expect(findAll(doc, re)).toHaveLength(4);
+    const after = applyCommands(doc, replaceAllCommands(doc, re, 'Adiós')).doc;
+    expect(findAll(after, makeRegex('hola', {})!)).toHaveLength(0);
+    const text = after.slides[0].elements[0];
+    expect(text.type === 'text' && text.html).toBe('<b>Adiós</b> amigos');
+    expect(after.slides[0].notes).toBe('Adiós mundo');
+  });
+
+  it('respeta palabra completa', () => {
+    const re = makeRegex('sol', { wholeWord: true })!;
+    expect('el sol y la solución'.match(re)?.length).toBe(1);
+  });
+});

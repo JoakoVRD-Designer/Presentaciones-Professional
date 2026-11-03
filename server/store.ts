@@ -8,6 +8,18 @@ import { createFromTemplate } from '../src/core/templates';
 export const DATA_DIR = path.resolve(process.env.LUMEN_DATA_DIR ?? path.join(process.cwd(), 'data'));
 const DOCS_DIR = path.join(DATA_DIR, 'presentations');
 export const ASSETS_DIR = path.join(DATA_DIR, 'assets');
+const HISTORY_DIR = path.join(DATA_DIR, 'history');
+const HISTORY_LIMIT = 100;
+const SNAPSHOT_INTERVAL = 2 * 60 * 1000;
+
+export interface VersionMeta {
+  id: string;
+  at: string;
+  origin: string;
+  label: string;
+  title: string;
+  slides: number;
+}
 
 export interface DocEvent {
   type: 'doc';
@@ -30,6 +42,7 @@ class Store extends EventEmitter {
   private cache = new Map<string, Presentation>();
   private writing = new Map<string, Promise<void>>();
   private locks = new Map<string, Promise<unknown>>();
+  private lastSnapshot = new Map<string, { at: number; origin: string }>();
 
   /** Serializa las operaciones de lectura-modificación-escritura por documento. */
   withLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
@@ -45,6 +58,74 @@ class Store extends EventEmitter {
   async init() {
     await fs.mkdir(DOCS_DIR, { recursive: true });
     await fs.mkdir(ASSETS_DIR, { recursive: true });
+    await fs.mkdir(HISTORY_DIR, { recursive: true });
+  }
+
+  /* ---------------- Historial de versiones ---------------- */
+
+  private historyDir(id: string) {
+    this.file(id); // valida el id
+    return path.join(HISTORY_DIR, id);
+  }
+
+  /** Guarda una instantánea de `doc` (la versión que está a punto de ser reemplazada). */
+  async snapshot(doc: Presentation, origin: string, label = ''): Promise<VersionMeta> {
+    const dir = this.historyDir(doc.id);
+    await fs.mkdir(dir, { recursive: true });
+    const at = new Date().toISOString();
+    const vid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const meta: VersionMeta = { id: vid, at, origin, label, title: doc.title, slides: doc.slides.length };
+    await fs.writeFile(path.join(dir, `${vid}.json`), JSON.stringify({ meta, doc }));
+    this.lastSnapshot.set(doc.id, { at: Date.now(), origin });
+    const files = (await fs.readdir(dir)).filter((f) => f.endsWith('.json')).sort();
+    for (const f of files.slice(0, Math.max(0, files.length - HISTORY_LIMIT))) await fs.rm(path.join(dir, f), { force: true });
+    return meta;
+  }
+
+  /** Decide si conviene guardar la versión anterior antes de un cambio. */
+  private async maybeSnapshot(prev: Presentation | undefined, origin: string) {
+    if (!prev) return;
+    const last = this.lastSnapshot.get(prev.id);
+    const external = !origin.startsWith('client_');
+    const stale = !last || Date.now() - last.at > SNAPSHOT_INTERVAL;
+    const originChanged = last && last.origin !== origin;
+    if (stale || (external && originChanged) || (!last && external)) {
+      await this.snapshot(prev, origin.startsWith('client_') ? 'editor' : origin).catch(() => {});
+    }
+  }
+
+  async history(id: string): Promise<VersionMeta[]> {
+    const dir = this.historyDir(id);
+    const files = (await fs.readdir(dir).catch(() => [] as string[])).filter((f) => f.endsWith('.json')).sort().reverse();
+    const out: VersionMeta[] = [];
+    for (const f of files) {
+      try {
+        out.push((JSON.parse(await fs.readFile(path.join(dir, f), 'utf8')) as { meta: VersionMeta }).meta);
+      } catch {
+        /* ignora versiones corruptas */
+      }
+    }
+    return out;
+  }
+
+  async version(id: string, vid: string): Promise<Presentation | null> {
+    if (!/^[\w-]+$/.test(vid)) return null;
+    try {
+      const raw = JSON.parse(await fs.readFile(path.join(this.historyDir(id), `${vid}.json`), 'utf8')) as { doc: unknown };
+      return normalizePresentation(raw.doc);
+    } catch {
+      return null;
+    }
+  }
+
+  restore(id: string, vid: string, origin: string) {
+    return this.withLock(id, async () => {
+      const current = await this.get(id);
+      const old = await this.version(id, vid);
+      if (!current || !old) throw Object.assign(new Error('Versión no encontrada'), { status: 404 });
+      await this.snapshot(current, 'restore', 'Antes de restaurar');
+      return this.save({ ...old, id, rev: current.rev }, origin);
+    });
   }
 
   private file(id: string) {
@@ -91,6 +172,7 @@ class Store extends EventEmitter {
 
   async save(doc: Presentation, origin: string): Promise<Presentation> {
     const current = this.cache.get(doc.id);
+    await this.maybeSnapshot(current, origin);
     const saved: Presentation = {
       ...doc,
       rev: Math.max(doc.rev ?? 0, current?.rev ?? 0) + 1,

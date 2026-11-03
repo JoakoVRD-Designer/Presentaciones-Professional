@@ -45,6 +45,11 @@ export function useShortcuts() {
         exportHtml();
         return;
       }
+      if (mod && (key === 'f' || key === 'h') && !st.findOpen) {
+        e.preventDefault();
+        st.set({ findOpen: true });
+        return;
+      }
       if (mod && key === 'p') {
         e.preventDefault();
         exportPdf();
@@ -55,7 +60,7 @@ export function useShortcuts() {
         st.set({ docsOpen: true });
         return;
       }
-      if (isTyping(e.target) || st.paletteOpen || st.docsOpen || st.helpOpen) return;
+      if (isTyping(e.target) || st.paletteOpen || st.docsOpen || st.helpOpen || st.findOpen || st.historyOpen) return;
       if (e.key === '?') {
         st.set({ helpOpen: true });
         return;

@@ -214,6 +214,24 @@ export async function exportHtml() {
   }
 }
 
+export function shareLink() {
+  const s = st();
+  const url = `${window.location.origin}${window.location.pathname}?view=${encodeURIComponent(s.doc.id)}`;
+  navigator.clipboard?.writeText(url).then(
+    () => {
+      sfx('success');
+      s.toast(
+        s.serverMode
+          ? 'Enlace de visualización copiado. Se actualiza en vivo mientras editas.'
+          : 'Enlace copiado (sin servidor solo funciona en este navegador; inicia «npm run dev» para compartirlo).',
+        'success',
+      );
+    },
+    () => s.toast(url, 'info'),
+  );
+  return url;
+}
+
 export async function exportPptx() {
   const s = st();
   try {

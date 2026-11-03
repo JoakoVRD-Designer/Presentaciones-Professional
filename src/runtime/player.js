@@ -132,6 +132,7 @@ const ICONS = {
   prev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
   next: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
   full: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
   notes: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h3"/></svg>',
   close: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
   sound: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
@@ -219,6 +220,7 @@ export function createPlayer(root, options) {
     counter,
     btn('next', 'Siguiente (→)', () => next()),
     el('span', 'lm-sep'),
+    btn('grid', 'Vista general (G)', () => toggleOverview()),
     btn('notes', 'Notas (N)', () => toggleNotes()),
     soundBtn,
     btn('full', 'Pantalla completa (F)', () => toggleFullscreen()),
@@ -248,6 +250,44 @@ export function createPlayer(root, options) {
     soundBtn.innerHTML = soundOn ? ICONS.sound : ICONS.mute;
     if (soundOn) lumenSound.play('tap');
   }
+  /* ---- Vista general ---- */
+  let overview = false;
+  function layoutOverview() {
+    const n = frames.length;
+    const cols = Math.ceil(Math.sqrt(n * 1.2));
+    const rows = Math.ceil(n / cols);
+    const gap = 60;
+    const cellW = (opts.width - gap * (cols + 1)) / cols;
+    const scale = Math.min(cellW / opts.width, (opts.height - gap * (rows + 1)) / rows / opts.height);
+    const totalW = cols * opts.width * scale + (cols - 1) * gap;
+    const totalH = rows * opts.height * scale + (rows - 1) * gap;
+    frames.forEach((f, i) => {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const x = (opts.width - totalW) / 2 + c * (opts.width * scale + gap);
+      const y = (opts.height - totalH) / 2 + r * (opts.height * scale + gap);
+      f.style.transformOrigin = '0 0';
+      f.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')';
+      f.classList.toggle('is-picked', i === index);
+    });
+  }
+  function toggleOverview(force) {
+    overview = typeof force === 'boolean' ? force : !overview;
+    root.classList.toggle('lm-overview', overview);
+    if (overview) {
+      clearTimeout(autoTimer);
+      layoutOverview();
+      if (soundOn) lumenSound.play('open');
+    } else {
+      frames.forEach((f) => {
+        f.style.transform = '';
+        f.style.transformOrigin = '';
+        f.classList.remove('is-picked');
+      });
+      scheduleAuto();
+    }
+  }
+
   function toggleNotes() {
     root.classList.toggle('lm-show-notes');
   }
@@ -492,6 +532,16 @@ export function createPlayer(root, options) {
     if (destroyed) return;
     const t = e.target;
     if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return;
+    if (overview && /^(ArrowRight|ArrowLeft|ArrowDown|ArrowUp|Enter| )$/.test(e.key)) {
+      e.preventDefault();
+      if (e.key === 'Enter' || e.key === ' ') return toggleOverview(false);
+      const cols = Math.ceil(Math.sqrt(frames.length * 1.2));
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' ? cols : -cols;
+      const target = Math.max(0, Math.min(frames.length - 1, index + d));
+      go(target, undefined, { fromStart: true, instant: true });
+      layoutOverview();
+      return;
+    }
     switch (e.key) {
       case 'ArrowRight':
       case 'ArrowDown':
@@ -526,6 +576,12 @@ export function createPlayer(root, options) {
       case 'M':
         toggleSound();
         break;
+      case 'g':
+      case 'G':
+      case 'o':
+      case 'O':
+        toggleOverview();
+        break;
       case 'b':
       case 'B':
       case '.':
@@ -533,7 +589,8 @@ export function createPlayer(root, options) {
         root.classList.toggle('lm-black', blackout);
         break;
       case 'Escape':
-        if (!document.fullscreenElement) exit();
+        if (overview) toggleOverview(false);
+        else if (!document.fullscreenElement) exit();
         break;
       default:
         if (/^[0-9]$/.test(e.key)) {
@@ -545,6 +602,15 @@ export function createPlayer(root, options) {
 
   function onClick(e) {
     const t = e.target;
+    if (overview) {
+      const f = t.closest('.lm-frame');
+      if (f) {
+        const i = frames.indexOf(f);
+        toggleOverview(false);
+        if (i >= 0 && i !== index) go(i, undefined, { fromStart: true, instant: true });
+      }
+      return;
+    }
     if (t.closest('.lm-ui, video[controls], iframe, a')) return;
     const link = t.closest('[data-link]');
     if (link) {
