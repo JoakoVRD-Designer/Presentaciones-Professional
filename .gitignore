@@ -1,0 +1,8 @@
+node_modules
+dist
+data/presentations/*.json
+data/assets/*
+!data/**/.gitkeep
+.env
+*.log
+.DS_Store
