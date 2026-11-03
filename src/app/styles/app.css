@@ -946,3 +946,18 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .export-result { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: rgba(52, 211, 153, 0.08); border: 1px solid rgba(52, 211, 153, 0.3); }
 .export-warn { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; color: #f5c26b; font-size: 12px; }
 .export-actions { align-items: center; }
+
+/* ---------- Trayectoria de movimiento ---------- */
+.motion-path { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.motion-path line { stroke: #22d3ee; stroke-width: 2; stroke-dasharray: 6 6; animation: mp-dash 1s linear infinite; }
+.motion-path .mp-start { fill: #22d3ee; }
+.motion-path .mp-end { fill: #0b0d17; stroke: #22d3ee; stroke-width: 2; }
+@keyframes mp-dash { to { stroke-dashoffset: -12; } }
+.motion-ghost { position: absolute; pointer-events: none; border: 1.5px dashed rgba(34, 211, 238, 0.85); border-radius: 4px; background: rgba(34, 211, 238, 0.06); }
+.motion-ghost span { position: absolute; left: 4px; top: 4px; padding: 1px 6px; border-radius: 4px; background: #0ea5c4; color: #fff; font: 600 10px/1.4 Inter, sans-serif; }
+
+/* ---------- Audio ---------- */
+.audio-field { display: flex; flex-direction: column; gap: 6px; }
+.audio-actions { display: flex; gap: 4px; align-items: center; }
+.rec-btn.is-recording { border-color: rgba(255, 92, 122, 0.6); background: rgba(255, 92, 122, 0.16); color: #ffb3c1; font-variant-numeric: tabular-nums; }
+.rec-btn.is-recording svg { animation: ui-pulse 1s ease-in-out infinite; }

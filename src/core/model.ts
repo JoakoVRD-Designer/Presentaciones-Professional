@@ -34,7 +34,33 @@ export const ENTRANCES = [
   'reveal-up',
   'typewriter',
   'glitch',
+  'draw',
+  'swing-in',
+  'unfold',
 ] as const;
+
+export const EXITS = [
+  'none',
+  'fade',
+  'fade-up',
+  'fade-down',
+  'fade-left',
+  'fade-right',
+  'zoom-out',
+  'zoom-in',
+  'blur-out',
+  'flip-out',
+  'collapse',
+  'slide-left',
+  'slide-right',
+  'drop-out',
+] as const;
+
+export const EMPHASES = ['none', 'pulse', 'shake', 'grow', 'shrink', 'spin', 'flash', 'bounce', 'wobble', 'jello', 'heartbeat', 'glow'] as const;
+
+export const SPLITS = ['none', 'lines', 'words', 'chars'] as const;
+
+export const CAMERAS = ['none', 'zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down', 'drift', 'dolly'] as const;
 
 export const LOOPS = [
   'none',
@@ -82,6 +108,10 @@ export const BG_EFFECTS = [
   'beams',
   'waves',
   'noise',
+  'particles',
+  'bokeh',
+  'liquid',
+  'rays',
 ] as const;
 
 export const SHAPES = [
@@ -116,7 +146,7 @@ export const BLEND_MODES = [
 
 export const MASKS = ['none', 'fade-bottom', 'fade-top', 'fade-left', 'fade-right', 'fade-edges', 'circle'] as const;
 
-export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart', 'table'] as const;
+export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart', 'table', 'lottie'] as const;
 
 export const CHART_KINDS = ['bar', 'column', 'line', 'area', 'donut', 'pie'] as const;
 
@@ -178,6 +208,28 @@ export const AnimationSchema = z
       .describe('0 = aparece con la diapositiva; n = aparece en el clic número n (builds).'),
     loop: z.enum(LOOPS).default('none').describe('Animación continua en bucle tras la entrada.'),
     loopDuration: num(3000, 200, 60000),
+    split: z
+      .enum(SPLITS)
+      .default('none')
+      .describe('Texto cinético: anima por líneas, palabras o letras (solo texto).'),
+    stagger: num(60, 0, 2000).describe('Retraso entre piezas del texto cinético en ms.'),
+    countUp: z.boolean().default(false).describe('Las cifras del texto cuentan desde 0 al aparecer.'),
+    exit: z.enum(EXITS).default('none').describe('Animación de salida.'),
+    exitStep: z.number().int().min(0).max(50).default(0).describe('Clic en el que el elemento sale (0 = nunca).'),
+    exitDuration: num(600, 50, 10000),
+    emphasis: z.enum(EMPHASES).default('none').describe('Animación de énfasis (una vez).'),
+    emphasisStep: z.number().int().min(0).max(50).default(0).describe('Clic en el que se enfatiza (0 = nunca).'),
+    move: z
+      .object({
+        step: z.number().int().min(0).max(50).default(0).describe('Clic en el que se mueve (0 = nunca).'),
+        x: num(0).describe('Desplazamiento horizontal en px.'),
+        y: num(0).describe('Desplazamiento vertical en px.'),
+        scale: num(1, 0.05, 20),
+        rotate: num(0, -3600, 3600),
+        duration: num(1000, 50, 20000),
+      })
+      .prefault({})
+      .describe('Trayectoria de movimiento: el elemento se desplaza/escala/gira en un clic.'),
   })
   .describe('Animaciones del elemento.');
 
@@ -351,6 +403,16 @@ export const TableElementSchema = z
   })
   .describe('Tabla de datos.');
 
+export const LottieElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('lottie'),
+    src: z.string().default('').describe('URL de una animación Lottie (.json), p. ej. de LottieFiles.'),
+    loop: z.boolean().default(true),
+    speed: num(1, 0.1, 5),
+  })
+  .describe('Animación vectorial Lottie (After Effects / LottieFiles).');
+
 export const ElementSchema = z.discriminatedUnion('type', [
   TextElementSchema,
   ImageElementSchema,
@@ -360,6 +422,7 @@ export const ElementSchema = z.discriminatedUnion('type', [
   EmbedElementSchema,
   ChartElementSchema,
   TableElementSchema,
+  LottieElementSchema,
 ]);
 
 export const BackgroundSchema = z
@@ -409,6 +472,16 @@ export const SlideSchema = z
     notes: z.string().default('').describe('Notas del orador.'),
     duration: num(0, 0, 3600).describe('Avance automático en segundos (0 = manual).'),
     hidden: z.boolean().default(false),
+    camera: z.enum(CAMERAS).default('none').describe('Movimiento de cámara cinematográfico lento durante la diapositiva.'),
+    cameraDuration: num(14000, 1000, 120000),
+    narration: z
+      .object({
+        src: z.string().default('').describe('Audio de narración (se reproduce al entrar).'),
+        volume: z.number().min(0).max(1).default(1),
+        advance: z.boolean().default(false).describe('Pasar a la siguiente diapositiva al terminar la narración.'),
+      })
+      .prefault({}),
+    hideMaster: z.boolean().default(false).describe('Ocultar los elementos de la diapositiva maestra.'),
   })
   .describe('Diapositiva.');
 
@@ -444,6 +517,13 @@ export const SettingsSchema = z
     slideNumbers: z.boolean().default(false),
     sounds: z.boolean().default(true).describe('Reproducir sonidos de transición en modo presentación.'),
     controls: z.boolean().default(true),
+    music: z
+      .object({
+        src: z.string().default('').describe('Música de fondo de toda la presentación.'),
+        volume: z.number().min(0).max(1).default(0.5),
+        loop: z.boolean().default(true),
+      })
+      .prefault({}),
   })
   .describe('Ajustes de reproducción.');
 
@@ -458,6 +538,9 @@ export const PresentationSchema = z.object({
   theme: ThemeSchema.prefault({}),
   settings: SettingsSchema.prefault({}),
   slides: z.array(SlideSchema).default([]),
+  master: SlideSchema.optional().describe(
+    'Diapositiva maestra: sus elementos (logo, pie, numeración con {n}/{total}/{title}/{date}) aparecen en todas las diapositivas.',
+  ),
 });
 
 /* ------------------------------------------------------------------ */
@@ -478,6 +561,7 @@ export type EmbedElement = WithId<z.infer<typeof EmbedElementSchema>>;
 export type ChartElement = WithId<z.infer<typeof ChartElementSchema>>;
 export type ChartKind = (typeof CHART_KINDS)[number];
 export type TableElement = WithId<z.infer<typeof TableElementSchema>>;
+export type LottieElement = WithId<z.infer<typeof LottieElementSchema>>;
 export type SlideElement =
   | TextElement
   | ImageElement
@@ -486,7 +570,8 @@ export type SlideElement =
   | IconElement
   | EmbedElement
   | ChartElement
-  | TableElement;
+  | TableElement
+  | LottieElement;
 export type ElementType = SlideElement['type'];
 export type ElementInput = z.input<typeof ElementSchema>;
 export type Background = z.infer<typeof BackgroundSchema>;
@@ -495,10 +580,16 @@ export type Slide = Omit<WithId<z.infer<typeof SlideSchema>>, 'elements'> & { el
 export type SlideInput = z.input<typeof SlideSchema>;
 export type Theme = z.infer<typeof ThemeSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
-export type Presentation = Omit<WithId<z.infer<typeof PresentationSchema>>, 'slides'> & { slides: Slide[] };
+export type Presentation = Omit<WithId<z.infer<typeof PresentationSchema>>, 'slides' | 'master'> & {
+  slides: Slide[];
+  master?: Slide;
+};
 export type PresentationInput = z.input<typeof PresentationSchema>;
 
 export type EntranceType = (typeof ENTRANCES)[number];
+export type ExitType = (typeof EXITS)[number];
+export type EmphasisType = (typeof EMPHASES)[number];
+export type CameraType = (typeof CAMERAS)[number];
 export type LoopType = (typeof LOOPS)[number];
 export type TransitionType = (typeof TRANSITIONS)[number];
 export type SoundName = (typeof SOUNDS)[number];
@@ -543,6 +634,7 @@ export function makePresentation(input: PresentationInput = {}): Presentation {
     createdAt: parsed.createdAt ?? now,
     updatedAt: parsed.updatedAt ?? now,
     slides: parsed.slides.map((s) => makeSlide(s)),
+    master: parsed.master ? makeSlide({ ...parsed.master, id: 'master' }) : undefined,
   };
 }
 

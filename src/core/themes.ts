@@ -211,3 +211,11 @@ export const STOCK_VIDEOS = [
     src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
   },
 ];
+
+/** Animaciones Lottie incluidas con Lumen (public/lottie). */
+export const BUILTIN_LOTTIE = [
+  { label: 'Pulso', src: '/lottie/pulso.json' },
+  { label: 'Check', src: '/lottie/check.json' },
+  { label: 'Cargando', src: '/lottie/cargando.json' },
+  { label: 'Ondas de audio', src: '/lottie/ondas.json' },
+];

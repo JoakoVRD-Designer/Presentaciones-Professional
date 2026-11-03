@@ -51,6 +51,53 @@ export const ENTRANCE_LABELS: Record<string, string> = {
   'reveal-up': 'Revelar ↑',
   typewriter: 'Máquina de escribir',
   glitch: 'Glitch',
+  draw: 'Dibujar',
+  'swing-in': 'Columpio',
+  unfold: 'Desplegar',
+};
+
+export const EXIT_LABELS: Record<string, string> = {
+  none: 'Ninguna',
+  fade: 'Desvanecer',
+  'fade-up': 'Subir',
+  'fade-down': 'Bajar',
+  'fade-left': 'Hacia izquierda',
+  'fade-right': 'Hacia derecha',
+  'zoom-out': 'Encoger',
+  'zoom-in': 'Agrandar',
+  'blur-out': 'Desenfocar',
+  'flip-out': 'Voltear',
+  collapse: 'Plegar',
+  'slide-left': 'Salir izq.',
+  'slide-right': 'Salir der.',
+  'drop-out': 'Caer',
+};
+
+export const EMPHASIS_LABELS: Record<string, string> = {
+  none: 'Ninguno',
+  pulse: 'Pulso',
+  shake: 'Sacudir',
+  grow: 'Crecer',
+  shrink: 'Encoger',
+  spin: 'Girar',
+  flash: 'Destello',
+  bounce: 'Rebotar',
+  wobble: 'Tambalear',
+  jello: 'Gelatina',
+  heartbeat: 'Latido',
+  glow: 'Brillo',
+};
+
+export const CAMERA_LABELS: Record<string, string> = {
+  none: 'Fija',
+  'zoom-in': 'Acercar',
+  'zoom-out': 'Alejar',
+  'pan-left': 'Paneo ←',
+  'pan-right': 'Paneo →',
+  'pan-up': 'Paneo ↑',
+  'pan-down': 'Paneo ↓',
+  drift: 'Deriva',
+  dolly: 'Dolly 3D',
 };
 
 export const LOOP_LABELS: Record<string, string> = {
@@ -106,6 +153,10 @@ export const EFFECT_LABELS: Record<string, string> = {
   beams: 'Haces',
   waves: 'Olas',
   noise: 'Ruido',
+  particles: 'Partículas',
+  bokeh: 'Bokeh',
+  liquid: 'Líquido',
+  rays: 'Rayos',
 };
 
 export const SHAPE_LABELS: Record<string, string> = {

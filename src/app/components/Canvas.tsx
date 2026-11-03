@@ -15,6 +15,7 @@ import type { Command } from '../../core/commands';
 import type { SlideElement } from '../../core/model';
 import { sanitizeHtml } from '../../core/sanitize';
 import { SlideRenderer } from '../../render/SlideRenderer';
+import { countUp } from '../../runtime/player.js';
 import { mediaSize, uploadAsset } from '../lib/assets';
 import { sfx } from '../lib/sound';
 import { expandGroups, useCurrentSlide, useEditor } from '../store/editor';
@@ -86,21 +87,51 @@ export function Canvas() {
   const scale = zoom === 'fit' ? Math.max(0.05, Math.min((size.w - 96) / W, (size.h - 96) / H)) : zoom;
 
   /* ---------- Vista previa de animaciones ---------- */
+  // Reproduce la secuencia completa del elemento: entrada → énfasis → trayectoria → salida.
   useEffect(() => {
     if (!previewTick.ids.length || !slideLayer.current) return;
     const timers: number[] = [];
+    const stops: (() => void)[] = [];
+    const resets: (() => void)[] = [];
     for (const id of previewTick.ids) {
-      const anim = slideLayer.current.querySelector<HTMLElement>(`.lm-el[data-id="${CSS.escape(id)}"] .lm-anim`);
-      if (!anim) continue;
-      anim.classList.remove('lm-preview');
+      const root = slideLayer.current.querySelector<HTMLElement>(`.lm-el[data-id="${CSS.escape(id)}"]`);
+      const anim = root?.querySelector<HTMLElement>('.lm-anim');
+      const body = root?.querySelector<HTMLElement>('.lm-body');
+      const el = slide?.elements.find((e) => e.id === id);
+      if (!anim || !el) continue;
+      const a = el.animation;
+      const reset = () => {
+        anim.classList.remove('lm-preview', 'lm-moved', 'lm-out-preview');
+        body?.classList.remove('lm-emph');
+      };
+      reset();
       void anim.offsetWidth;
       anim.classList.add('lm-preview');
-      const el = slide?.elements.find((e) => e.id === id);
-      const total = el ? el.animation.duration + el.animation.delay + 150 : 2000;
-      timers.push(window.setTimeout(() => anim.classList.remove('lm-preview'), total));
+      if (a.countUp && el.type === 'text') stops.push(countUp(anim, Math.max(1200, a.duration * 1.6), a.delay));
+      const pieces = anim.querySelectorAll('.lm-sw').length;
+      let t = a.delay + a.duration + (pieces > 1 ? (pieces - 1) * a.stagger : 0) + 200;
+      if (a.emphasis !== 'none' && a.emphasisStep) {
+        timers.push(window.setTimeout(() => body?.classList.add('lm-emph'), t));
+        t += 1000;
+      }
+      if (a.move.step) {
+        timers.push(window.setTimeout(() => anim.classList.add('lm-moved'), t));
+        t += a.move.duration + 300;
+      }
+      if (a.exit !== 'none' && a.exitStep) {
+        timers.push(window.setTimeout(() => anim.classList.add('lm-out-preview'), t));
+        t += a.exitDuration + 400;
+      }
+      timers.push(window.setTimeout(reset, t + (a.exit !== 'none' && a.exitStep ? 300 : 600)));
+      resets.push(reset);
     }
-    return () => timers.forEach(clearTimeout);
-  }, [previewTick, slide?.elements]);
+    return () => {
+      timers.forEach(clearTimeout);
+      stops.forEach((stop) => stop());
+      resets.forEach((r) => r());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewTick]);
 
   /* ---------- Coordenadas ---------- */
   const toSlide = useCallback(
@@ -500,6 +531,32 @@ export function Canvas() {
             </div>
           ))}
 
+          {single && single.animation.move.step > 0 && (() => {
+            const m = single.animation.move;
+            const cx = (single.x + single.w / 2) * scale;
+            const cy = (single.y + single.h / 2) * scale;
+            return (
+              <>
+                <svg className="motion-path" width="100%" height="100%">
+                  <line x1={cx} y1={cy} x2={cx + m.x * scale} y2={cy + m.y * scale} />
+                  <circle cx={cx} cy={cy} r={4} className="mp-start" />
+                  <circle cx={cx + m.x * scale} cy={cy + m.y * scale} r={5} className="mp-end" />
+                </svg>
+                <div
+                  className="motion-ghost"
+                  style={{
+                    left: (single.x + m.x) * scale,
+                    top: (single.y + m.y) * scale,
+                    width: single.w * scale,
+                    height: single.h * scale,
+                    transform: `rotate(${single.rotation + m.rotate}deg) scale(${m.scale})`,
+                  }}
+                >
+                  <span>clic {m.step}</span>
+                </div>
+              </>
+            );
+          })()}
           {selected.length > 1 && (() => {
             const l = Math.min(...selected.map((e) => e.x));
             const t = Math.min(...selected.map((e) => e.y));

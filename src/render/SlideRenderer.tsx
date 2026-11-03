@@ -2,7 +2,9 @@ import { icons, type LucideIcon } from 'lucide-react';
 import { memo, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { Background, Slide, SlideElement, Theme } from '../core/model';
 import { ChartView } from './Chart';
+import { LottieView } from './LottieView';
 import { TableView } from './Table';
+import { replaceTokens, splitHtml, type SlideContext } from './textfx';
 import { sanitizeHtml } from '../core/sanitize';
 import {
   CLIP_SHAPES,
@@ -31,6 +33,10 @@ export interface SlideRendererProps {
   /** Mostrar animaciones en bucle en modo edición. */
   live?: boolean;
   className?: string;
+  /** Diapositiva maestra cuyos elementos se dibujan detrás del contenido. */
+  master?: Slide | null;
+  /** Número de diapositiva, total y título para los tokens {n} {total} {title}. */
+  context?: SlideContext;
 }
 
 export function resolveIcon(name: string): LucideIcon {
@@ -54,7 +60,8 @@ function EffectLayer({ bg, theme }: { bg: Background; theme: Theme }) {
     '--c3': c3,
     '--fx-speed': String(1 / (bg.effectSpeed || 1)),
   } as CSSProperties;
-  const blobs = bg.effect === 'aurora' || bg.effect === 'waves' ? 4 : bg.effect === 'stars' ? 3 : bg.effect === 'beams' ? 2 : 0;
+  const BLOBS: Record<string, number> = { aurora: 4, waves: 4, stars: 3, beams: 2, particles: 3, bokeh: 6, liquid: 2, rays: 2 };
+  const blobs = BLOBS[bg.effect] ?? 0;
   return (
     <div className={`lm-fx lm-fx-${bg.effect}`} style={style}>
       {Array.from({ length: blobs }, (_, i) => (
@@ -187,6 +194,7 @@ function ElementContent({
   editing,
   onTextCommit,
   onEditEnd,
+  context,
 }: {
   el: SlideElement;
   theme: Theme;
@@ -194,6 +202,7 @@ function ElementContent({
   editing: boolean;
   onTextCommit?: (id: string, html: string) => void;
   onEditEnd?: () => void;
+  context?: SlideContext;
 }) {
   switch (el.type) {
     case 'text': {
@@ -213,20 +222,26 @@ function ElementContent({
         textShadow: el.textShadow || undefined,
         WebkitTextStroke: el.stroke || undefined,
       };
-      const innerStyle: CSSProperties = el.gradient
-        ? {
-            backgroundImage: el.gradient,
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }
-        : {};
+      const innerStyle = (
+        el.gradient
+          ? {
+              '--lm-text-grad': el.gradient,
+              backgroundImage: el.gradient,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }
+          : {}
+      ) as CSSProperties;
+      let html = replaceTokens(sanitizeHtml(el.html), context);
+      const split = el.animation.split;
+      if (split !== 'none' && el.animation.entrance !== 'none' && mode !== 'thumb') html = splitHtml(html, split);
       return (
         <div className={`lm-text${el.gradient ? ' lm-text-gradient' : ''}`} style={style}>
           {editing && onTextCommit && onEditEnd ? (
             <EditableText html={el.html} onCommit={(h) => onTextCommit(el.id, h)} onDone={onEditEnd} />
           ) : (
-            <div className="lm-text-inner" style={innerStyle} dangerouslySetInnerHTML={{ __html: sanitizeHtml(el.html) }} />
+            <div className="lm-text-inner" style={innerStyle} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
       );
@@ -288,6 +303,8 @@ function ElementContent({
     }
     case 'chart':
       return <ChartView el={el} />;
+    case 'lottie':
+      return <LottieView el={el} mode={mode} />;
     case 'table':
       return <TableView el={el} />;
     case 'embed':
@@ -319,6 +336,7 @@ function ElementView(props: {
   editing: boolean;
   onTextCommit?: (id: string, html: string) => void;
   onEditEnd?: () => void;
+  context?: SlideContext;
 }) {
   const { el, theme } = props;
   if (el.hidden && props.mode !== 'edit') return null;
@@ -348,10 +366,23 @@ function ElementView(props: {
     WebkitBackdropFilter: !clip && s.backdropBlur ? `blur(${s.backdropBlur}px) saturate(140%)` : undefined,
   };
   const a = el.animation;
+  const split = el.type === 'text' && a.split !== 'none' && a.entrance !== 'none';
   const animStyle = {
     '--lm-dur': `${a.duration}ms`,
     '--lm-delay': `${a.delay}ms`,
     '--lm-ease': EASING_CSS[a.easing] ?? EASING_CSS.expo,
+    ...(split ? { '--lm-in-name': `lm-in-${a.entrance}`, '--lm-stagger': `${a.stagger}ms` } : {}),
+    ...(a.exit !== 'none' && a.exitStep ? { '--lm-out-name': `lm-out-${a.exit}`, '--lm-out-dur': `${a.exitDuration}ms` } : {}),
+    ...(a.emphasis !== 'none' && a.emphasisStep ? { '--lm-emph-name': `lm-emph-${a.emphasis}` } : {}),
+    ...(a.move.step
+      ? {
+          '--mv-x': `${a.move.x}px`,
+          '--mv-y': `${a.move.y}px`,
+          '--mv-s': String(a.move.scale),
+          '--mv-r': `${a.move.rotate}deg`,
+          '--mv-dur': `${a.move.duration}ms`,
+        }
+      : {}),
   } as CSSProperties;
   const loopStyle = { '--lm-loop-dur': `${a.loopDuration}ms`, '--lm-glow': s.glowColor || theme.colors.primary } as CSSProperties;
 
@@ -372,7 +403,16 @@ function ElementView(props: {
         mixBlendMode: s.blendMode !== 'normal' ? s.blendMode : undefined,
       }}
     >
-      <div className="lm-anim" data-entrance={a.entrance} data-step={a.step} style={animStyle}>
+      <div
+        className={`lm-anim${split ? ' lm-split' : ''}`}
+        data-entrance={a.entrance}
+        data-step={a.step}
+        data-exit-step={a.exit !== 'none' && a.exitStep ? a.exitStep : undefined}
+        data-emph-step={a.emphasis !== 'none' && a.emphasisStep ? a.emphasisStep : undefined}
+        data-move-step={a.move.step || undefined}
+        data-countup={el.type === 'text' && a.countUp ? 'true' : undefined}
+        style={animStyle}
+      >
         <div className="lm-loop" data-loop={a.loop} style={loopStyle}>
           <div className={`lm-body${radius ? ' lm-rounded' : ''}`} style={bodyStyle}>
             <ElementContent {...props} />
@@ -398,25 +438,41 @@ export const SlideRenderer = memo(function SlideRenderer({
   onEditEnd,
   live = true,
   className,
+  master,
+  context,
 }: SlideRendererProps) {
   const cls = ['lm-slide', `lm-mode-${mode}`, live && mode !== 'thumb' ? 'lm-live' : '', className ?? '']
     .filter(Boolean)
     .join(' ');
   return (
     <div className={cls} style={{ width, height, ...themeVars(theme) }} data-slide-id={slide.id}>
-      <BackgroundLayer bg={slide.background} theme={theme} mode={mode} />
-      <div className="lm-elements">
-        {slide.elements.map((el) => (
-          <ElementView
-            key={el.id}
-            el={el}
-            theme={theme}
-            mode={mode}
-            editing={editingId === el.id}
-            onTextCommit={onTextCommit}
-            onEditEnd={onEditEnd}
-          />
-        ))}
+      <div
+        className="lm-cam"
+        data-camera={slide.camera !== 'none' ? slide.camera : undefined}
+        style={slide.camera !== 'none' ? ({ '--cam-dur': `${slide.cameraDuration}ms` } as CSSProperties) : undefined}
+      >
+        <BackgroundLayer bg={slide.background} theme={theme} mode={mode} />
+        {master && !slide.hideMaster && master.elements.length > 0 && (
+          <div className="lm-elements lm-master-layer">
+            {master.elements.map((el) => (
+              <ElementView key={el.id} el={el} theme={theme} mode={mode === 'edit' ? 'thumb' : mode} editing={false} context={context} />
+            ))}
+          </div>
+        )}
+        <div className="lm-elements">
+          {slide.elements.map((el) => (
+            <ElementView
+              key={el.id}
+              el={el}
+              theme={theme}
+              mode={mode}
+              editing={editingId === el.id}
+              onTextCommit={onTextCommit}
+              onEditEnd={onEditEnd}
+              context={context}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

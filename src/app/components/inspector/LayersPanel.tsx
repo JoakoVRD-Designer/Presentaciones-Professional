@@ -13,6 +13,7 @@ import {
   Type,
   Unlock,
   Table2,
+  Clapperboard,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlideElement } from '../../../core/model';
@@ -30,6 +31,7 @@ const TYPE_ICON: Record<SlideElement['type'], typeof Type> = {
   embed: Globe,
   chart: ChartColumn,
   table: Table2,
+  lottie: Clapperboard,
 };
 
 function labelOf(el: SlideElement): string {
@@ -37,7 +39,7 @@ function labelOf(el: SlideElement): string {
   if (el.type === 'text') return htmlToPlainText(el.html).slice(0, 40) || 'Texto';
   if (el.type === 'icon') return el.icon;
   if (el.type === 'chart') return `Gráfico (${el.chart})`;
-  return ({ image: 'Imagen', video: 'Video', shape: 'Forma', embed: 'Web', table: 'Tabla' } as Record<string, string>)[el.type] ?? el.type;
+  return ({ image: 'Imagen', video: 'Video', shape: 'Forma', embed: 'Web', table: 'Tabla', lottie: 'Lottie' } as Record<string, string>)[el.type] ?? el.type;
 }
 
 function LayerName({ el }: { el: SlideElement }) {

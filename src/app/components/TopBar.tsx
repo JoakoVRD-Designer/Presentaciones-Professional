@@ -37,7 +37,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
-import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
+import { BUILTIN_LOTTIE, STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
 import { CLIP_SHAPES } from '../../render/styles';
 import {
   exportHtml,
@@ -265,6 +265,31 @@ export function TopBar() {
                 onCommit={(v) => {
                   if (v.trim()) {
                     insertMedia('video', v.trim());
+                    close();
+                  }
+                }}
+              />
+              <div className="pop-label">Animación Lottie</div>
+              <div className="chips">
+                {BUILTIN_LOTTIE.map((l) => (
+                  <button
+                    key={l.src}
+                    className="chip"
+                    onClick={() => {
+                      insertElement({ type: 'lottie', name: l.label, src: l.src, w: 360, h: 360, animation: { entrance: 'zoom-in' } });
+                      close();
+                    }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+              <TextInput
+                value=""
+                placeholder="URL .json de LottieFiles y Enter"
+                onCommit={(v) => {
+                  if (v.trim()) {
+                    insertElement({ type: 'lottie', src: v.trim(), w: 520, h: 520, animation: { entrance: 'zoom-in' } });
                     close();
                   }
                 }}

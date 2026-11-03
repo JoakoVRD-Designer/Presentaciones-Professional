@@ -4,6 +4,7 @@ import { FONTS, THEMES } from '../../../core/themes';
 import { sfx } from '../../lib/sound';
 import { useEditor } from '../../store/editor';
 import { ColorInput, Row, Section, Segmented, Select, Slider, Switch } from '../ui/fields';
+import { AudioField } from '../ui/AudioField';
 
 const COLOR_LABELS: Record<string, string> = {
   background: 'Fondo',
@@ -77,6 +78,21 @@ export function ThemeInspector() {
           <Slider value={theme.radius} min={0} max={80} unit="px" onChange={(v) => setTheme({ radius: v }, 'radius')} />
         </Row>
         <p className="hint">Los elementos con color «del tema» se actualizan automáticamente.</p>
+      </Section>
+
+      <Section title="Música de fondo" id="th-music">
+        <AudioField value={settings.music.src} onChange={(v) => setSettings({ music: { src: v } })} />
+        {settings.music.src && (
+          <>
+            <Row label="Volumen">
+              <Slider value={Math.round(settings.music.volume * 100)} unit="%" onChange={(v) => setSettings({ music: { volume: v / 100 } })} />
+            </Row>
+            <Row label="Repetir">
+              <Switch checked={settings.music.loop} onChange={(v) => setSettings({ music: { loop: v } })} />
+            </Row>
+          </>
+        )}
+        <p className="hint">Suena durante toda la presentación con fundido de entrada; baja sola durante las narraciones.</p>
       </Section>
 
       <Section title="Reproducción" id="th-play">

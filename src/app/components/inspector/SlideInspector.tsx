@@ -1,6 +1,6 @@
 import { Film, Image as ImageIcon, Palette, Play, Sparkles, Square, Upload, Volume2 } from 'lucide-react';
 import { useMemo } from 'react';
-import { BG_EFFECTS, BackgroundSchema, SOUNDS, TRANSITIONS, type Slide, type Theme } from '../../../core/model';
+import { BG_EFFECTS, BackgroundSchema, CAMERAS, SOUNDS, TRANSITIONS, type Slide, type Theme } from '../../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../../core/themes';
 import { SlideRenderer } from '../../../render/SlideRenderer';
 import { pickFile, uploadAsset } from '../../lib/assets';
@@ -8,7 +8,8 @@ import { previewSound, sfx } from '../../lib/sound';
 import { useCurrentSlide, useEditor } from '../../store/editor';
 import { ColorInput, Row, Section, Segmented, Select, Slider, Switch, TextArea, TextInput } from '../ui/fields';
 import { IconButton } from '../ui/IconButton';
-import { EFFECT_LABELS, SOUND_LABELS, TRANSITION_LABELS, useSlidePatch } from './common';
+import { AudioField } from '../ui/AudioField';
+import { CAMERA_LABELS, EFFECT_LABELS, SOUND_LABELS, TRANSITION_LABELS, useSlidePatch } from './common';
 
 function EffectTile({ effect, slide, theme, active, onPick }: { effect: string; slide: Slide; theme: Theme; active: boolean; onPick: () => void }) {
   const mini = useMemo<Slide>(
@@ -38,6 +39,17 @@ export function SlideInspector() {
   if (!slide) return <div className="inspector-scroll empty">Sin diapositiva</div>;
   const bg = slide.background;
   const tr = slide.transition;
+
+  const previewCamera = () => {
+    requestAnimationFrame(() => {
+      const cam = document.querySelector<HTMLElement>('.canvas-slide .lm-cam');
+      if (!cam) return;
+      cam.classList.remove('lm-cam-preview');
+      void cam.offsetWidth;
+      cam.classList.add('lm-cam-preview');
+      window.setTimeout(() => cam.classList.remove('lm-cam-preview'), Math.min(slide.cameraDuration, 8000));
+    });
+  };
 
   const upload = async (kind: 'image' | 'video') => {
     const file = await pickFile(kind === 'image' ? 'image/*' : 'video/*');
@@ -232,6 +244,58 @@ export function SlideInspector() {
           <Play size={13} /> Ver transición en presentación
         </button>
       </Section>
+
+      <Section title="Cámara cinematográfica" id="sl-camera">
+        <div className="chips">
+          {CAMERAS.map((c) => (
+            <button
+              key={c}
+              className={`chip${slide.camera === c ? ' is-active' : ''}`}
+              onClick={() => {
+                sfx('tick');
+                p.update({ camera: c });
+                if (c !== 'none') previewCamera();
+              }}
+            >
+              {CAMERA_LABELS[c]}
+            </button>
+          ))}
+        </div>
+        {slide.camera !== 'none' && (
+          <>
+            <Row label="Duración">
+              <Slider value={Math.round(slide.cameraDuration / 1000)} min={2} max={60} unit="s" onChange={(v) => p.update({ cameraDuration: v * 1000 }, 'camdur')} />
+            </Row>
+            <button className="btn ghost small" onClick={previewCamera}>
+              <Play size={13} /> Ver movimiento
+            </button>
+          </>
+        )}
+        <p className="hint">Un movimiento lento de toda la escena mientras la diapositiva está en pantalla, como en un documental.</p>
+      </Section>
+
+      <Section title="Narración" id="sl-narration" defaultOpen={false}>
+        <AudioField value={slide.narration.src} record onChange={(v) => p.update({ narration: { src: v } })} />
+        {slide.narration.src && (
+          <>
+            <Row label="Volumen">
+              <Slider value={Math.round(slide.narration.volume * 100)} unit="%" onChange={(v) => p.update({ narration: { volume: v / 100 } }, 'narvol')} />
+            </Row>
+            <Row label="Avanzar al terminar">
+              <Switch checked={slide.narration.advance} onChange={(v) => p.update({ narration: { advance: v } })} />
+            </Row>
+          </>
+        )}
+        <p className="hint">Se reproduce al entrar en la diapositiva (la música baja de volumen mientras tanto). Ideal para presentaciones autónomas y video.</p>
+      </Section>
+
+      {useEditor.getState().doc.master && (
+        <Section title="Diapositiva maestra" id="sl-master" defaultOpen={false}>
+          <Row label="Ocultar maestra">
+            <Switch checked={slide.hideMaster} onChange={(v) => p.update({ hideMaster: v })} />
+          </Row>
+        </Section>
+      )}
 
       <Section title="Notas del orador" id="sl-notes">
         <TextArea value={slide.notes} rows={5} placeholder="Lo que quieres decir en esta diapositiva…" onCommit={(v) => p.update({ notes: v })} />

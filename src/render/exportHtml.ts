@@ -17,6 +17,7 @@ import { googleFontsUrl } from '../core/themes';
 import playerCss from '../runtime/player.css?raw';
 import playerJs from '../runtime/player.js?raw';
 import slideCss from '../runtime/slide.css?raw';
+import lottieJs from 'lottie-web/build/player/lottie_light.min.js?raw';
 import { Deck } from './Deck';
 import { SlideRenderer } from './SlideRenderer';
 
@@ -141,6 +142,16 @@ for (const el of document.querySelectorAll('[data-lm-data]')) el.dataset.src = l
 window.lumenMedia = lumenMediaUrls;
 `;
 
+/** Runtime: monta las animaciones Lottie incrustadas. */
+const LOTTIE_RUNTIME = `
+if (window.lottie) for (const el of document.querySelectorAll('.lm-lottie[data-src]')) {
+  fetch(el.dataset.src).then((r) => r.json()).then((data) => {
+    const a = window.lottie.loadAnimation({ container: el, renderer: 'svg', loop: el.dataset.loop !== 'false', autoplay: true, animationData: data });
+    a.setSpeed(Number(el.dataset.speed) || 1);
+  }).catch(() => {});
+}
+`;
+
 /** Evita que el navegador intente cargar "lumen-media:" antes de que el runtime los resuelva. */
 function deferMediaAttributes(markup: string): string {
   return markup
@@ -202,8 +213,9 @@ export async function exportHtml(input: Presentation, options: ExportOptions = {
     sounds: doc.settings.sounds,
     controls: opts.controls,
     hash: true,
-    music: (doc.settings as unknown as { music?: unknown }).music ?? null,
+    music: doc.settings.music.src ? doc.settings.music : null,
   };
+  const hasLottie = [...doc.slides, ...(doc.master ? [doc.master] : [])].some((s) => s.elements.some((e) => e.type === 'lottie' && e.src));
   const mediaScripts = payloads
     .map((p) => `<script type="application/x-lumen-media" data-id="${p.id}" data-mime="${escapeHtml(p.mime)}">${p.b64}</script>`)
     .join('\n');
@@ -230,8 +242,10 @@ ${playerCss}
 ${markup}
 ${mediaScripts}
 ${editableDoc}
+${hasLottie ? `<script>${lottieJs.replace(/<\/script/gi, '<\\/script')}</script>` : ''}
 <script type="module">
 ${MEDIA_RUNTIME}
+${hasLottie ? LOTTIE_RUNTIME : ''}
 ${playerJs}
 const deck = document.querySelector('.lm-deck');
 window.lumenPlayer = createPlayer(deck, ${JSON.stringify(config)});

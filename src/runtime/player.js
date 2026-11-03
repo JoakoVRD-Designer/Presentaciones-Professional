@@ -126,6 +126,72 @@ export const lumenSound = {
   names: Object.keys(SOUNDS),
 };
 
+/* ------------------------- Cifras animadas -------------------------- */
+
+const NUM_RE = /\d[\d.,\u00a0\u202f']*\d|\d/g;
+
+function parseNumber(raw) {
+  const s = raw.replace(/[\u00a0\u202f']/g, '');
+  const dots = (s.match(/\./g) || []).length;
+  const commas = (s.match(/,/g) || []).length;
+  let dec = '';
+  if (dots && commas) dec = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
+  else if (dots === 1 && !/\.\d{3}$/.test(s)) dec = '.';
+  else if (commas === 1 && !/,\d{3}$/.test(s)) dec = ',';
+  const group = dec === '.' ? ',' : dec === ',' ? '.' : dots > 1 || (dots === 1 && !dec) ? '.' : commas ? ',' : '';
+  const decimals = dec ? s.length - s.lastIndexOf(dec) - 1 : 0;
+  const clean = s.split(group || '#').join('').replace(dec || '#', '.');
+  return { value: parseFloat(clean), decimals, dec, group };
+}
+
+function formatNumber(v, f) {
+  const fixed = v.toFixed(f.decimals);
+  let [int, frac] = fixed.split('.');
+  if (f.group) int = int.replace(/\B(?=(\d{3})+(?!\d))/g, f.group);
+  return frac ? int + f.dec + frac : int;
+}
+
+/** Anima desde 0 las cifras de los textos de un elemento (mantiene formato, prefijos y sufijos). */
+export function countUp(container, duration, delay) {
+  const target = container.querySelector('.lm-text-inner') || container;
+  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) {
+    const n = walker.currentNode;
+    if (NUM_RE.test(n.nodeValue)) nodes.push({ node: n, original: n.nodeValue });
+    NUM_RE.lastIndex = 0;
+  }
+  if (!nodes.length) return () => {};
+  const parts = nodes.map((n) => ({
+    ...n,
+    segments: n.original.split(NUM_RE),
+    numbers: (n.original.match(NUM_RE) || []).map(parseNumber),
+  }));
+  const render = (t) => {
+    const e = t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    for (const p of parts) {
+      let out = p.segments[0];
+      p.numbers.forEach((f, i) => {
+        out += formatNumber(f.value * e, f) + p.segments[i + 1];
+      });
+      p.node.nodeValue = t >= 1 ? p.original : out;
+    }
+  };
+  render(0);
+  let raf = 0;
+  const start = performance.now() + (delay || 0);
+  const tick = (now) => {
+    const t = Math.max(0, Math.min(1, (now - start) / (duration || 1500)));
+    render(t);
+    if (t < 1) raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => {
+    cancelAnimationFrame(raf);
+    render(1);
+  };
+}
+
 /* --------------------------- Reproductor ---------------------------- */
 
 const ICONS = {
@@ -248,7 +314,16 @@ export function createPlayer(root, options) {
   function toggleSound() {
     soundOn = !soundOn;
     soundBtn.innerHTML = soundOn ? ICONS.sound : ICONS.mute;
-    if (soundOn) lumenSound.play('tap');
+    if (soundOn) {
+      lumenSound.play('tap');
+      if (music) {
+        musicStarted = false;
+        startMusic();
+      }
+    } else {
+      if (music) music.pause();
+      if (narration) narration.pause();
+    }
   }
   /* ---- Vista general ---- */
   let overview = false;
@@ -304,15 +379,53 @@ export function createPlayer(root, options) {
     return Array.prototype.slice.call(frame.querySelectorAll('.lm-anim'));
   }
   function maxStep(frame) {
-    return anims(frame).reduce((m, a) => Math.max(m, Number(a.dataset.step) || 0), 0);
+    return anims(frame).reduce(
+      (m, a) =>
+        Math.max(m, Number(a.dataset.step) || 0, Number(a.dataset.exitStep) || 0, Number(a.dataset.emphStep) || 0, Number(a.dataset.moveStep) || 0),
+      0,
+    );
   }
+  const counters = new Map();
   function applyStep(frame, s, replay) {
     const list = anims(frame);
     if (replay) {
-      list.forEach((a) => a.classList.remove('lm-in'));
+      list.forEach((a) => {
+        a.classList.remove('lm-in', 'lm-out', 'lm-moved');
+        const body = a.querySelector('.lm-body');
+        if (body) body.classList.remove('lm-emph');
+      });
       void frame.offsetWidth; // reinicia animaciones CSS
     }
-    list.forEach((a) => a.classList.toggle('lm-in', (Number(a.dataset.step) || 0) <= s));
+    list.forEach((a) => {
+      const was = a.classList.contains('lm-in');
+      const on = (Number(a.dataset.step) || 0) <= s;
+      a.classList.toggle('lm-in', on);
+      const exitStep = Number(a.dataset.exitStep) || 0;
+      a.classList.toggle('lm-out', exitStep > 0 && s >= exitStep);
+      const moveStep = Number(a.dataset.moveStep) || 0;
+      a.classList.toggle('lm-moved', moveStep > 0 && s >= moveStep);
+      const emphStep = Number(a.dataset.emphStep) || 0;
+      const body = a.querySelector('.lm-body');
+      if (body && emphStep > 0) {
+        const want = s >= emphStep;
+        if (want && !body.classList.contains('lm-emph')) {
+          void body.offsetWidth;
+          body.classList.add('lm-emph');
+        } else if (!want) body.classList.remove('lm-emph');
+      }
+      if (a.dataset.countup === 'true') {
+        if (on && (!was || replay)) {
+          const stop = counters.get(a);
+          if (stop) stop();
+          const cs = getComputedStyle(a);
+          const offset = parseFloat(frame.style.getPropertyValue('--lm-offset')) || 0;
+          counters.set(a, countUp(a, Math.max(1200, parseFloat(cs.getPropertyValue('--lm-dur')) * 1.6 || 1500), (parseFloat(cs.getPropertyValue('--lm-delay')) || 0) + offset));
+        } else if (!on && counters.has(a)) {
+          counters.get(a)();
+          counters.delete(a);
+        }
+      }
+    });
   }
 
   /* ---- Morph (Magic Move) ---- */
@@ -411,6 +524,51 @@ export function createPlayer(root, options) {
     });
   }
 
+  /* ---- Música y narración ---- */
+  const resolveSrc = (u) => String(u || '').replace(/lumen-media:([\w-]+)/, (_, id) => (window.lumenMedia || {})[id] || '');
+  let music = null;
+  let musicStarted = false;
+  if (opts.music && opts.music.src) {
+    music = new Audio(resolveSrc(opts.music.src));
+    music.loop = opts.music.loop !== false;
+    music.preload = 'auto';
+    music.volume = 0;
+  }
+  function fadeAudio(a, to, ms) {
+    const from = a.volume;
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / ms);
+      a.volume = Math.max(0, Math.min(1, from + (to - from) * t));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function startMusic() {
+    if (!music || musicStarted || !soundOn) return;
+    musicStarted = true;
+    const p = music.play();
+    if (p && p.catch) p.catch(() => (musicStarted = false));
+    fadeAudio(music, typeof opts.music.volume === 'number' ? opts.music.volume : 0.5, 2000);
+  }
+  let narration = null;
+  function playNarration(frame) {
+    if (narration) {
+      narration.pause();
+      narration = null;
+    }
+    const src = frame && resolveSrc(frame.dataset.narration);
+    if (!src || !soundOn) return;
+    narration = new Audio(src);
+    narration.volume = Number(frame.dataset.narrationVolume || 1);
+    if (music) fadeAudio(music, Math.min(music.volume, 0.15), 600);
+    narration.addEventListener('ended', () => {
+      if (music && musicStarted) fadeAudio(music, typeof opts.music.volume === 'number' ? opts.music.volume : 0.5, 1200);
+      if (frame.dataset.narrationAdvance === 'true' && frames[index] === frame) next();
+    });
+    narration.play().catch(() => {});
+  }
+
   /* ---- Navegación ---- */
   function updateUi() {
     const total = frames.length;
@@ -498,12 +656,15 @@ export function createPlayer(root, options) {
     step = dir < 0 && !(opt && opt.fromStart) ? maxStep(nextFrame) : 0;
     applyStep(nextFrame, step, true);
     media(nextFrame, true);
+    playNarration(nextFrame);
+    root.dispatchEvent(new CustomEvent('lumen:slide', { detail: { index: i, frame: nextFrame, previous: prevFrame || null } }));
     if (soundOn && index >= 0 && prevFrame) lumenSound.play(nextFrame.dataset.sound);
     updateUi();
     scheduleAuto();
   }
 
   function next() {
+    startMusic();
     const f = frames[index];
     if (f && step < maxStep(f)) {
       step += 1;
@@ -517,6 +678,7 @@ export function createPlayer(root, options) {
     if (index < frames.length - 1 || opts.loop) go(index + 1, 1, { fromStart: true });
   }
   function prev() {
+    startMusic();
     const f = frames[index];
     if (f && step > 0) {
       step -= 1;
@@ -691,6 +853,9 @@ export function createPlayer(root, options) {
       document.removeEventListener('fullscreenchange', onFsChange);
       if (ro) ro.disconnect();
       allFrames.forEach((f) => media(f, false));
+      counters.forEach((stop) => stop());
+      if (music) music.pause();
+      if (narration) narration.pause();
       ui.remove();
     },
   };

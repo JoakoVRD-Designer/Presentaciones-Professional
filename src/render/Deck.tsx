@@ -17,6 +17,9 @@ export function Deck({ doc, mode }: { doc: Presentation; mode: Extract<RenderMod
             data-duration={slide.duration || undefined}
             data-hidden={slide.hidden ? 'true' : undefined}
             data-notes={slide.notes || undefined}
+            data-narration={slide.narration.src || undefined}
+            data-narration-advance={slide.narration.src && slide.narration.advance ? 'true' : undefined}
+            data-narration-volume={slide.narration.src && slide.narration.volume !== 1 ? slide.narration.volume : undefined}
             aria-label={slide.name || `Diapositiva ${i + 1}`}
           >
             <SlideRenderer slide={slide} theme={doc.theme} width={doc.width} height={doc.height} mode={mode} />

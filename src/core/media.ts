@@ -70,7 +70,9 @@ export function mapMedia(doc: Presentation, fn: (url: string, kind: MediaKind) =
   return copy as unknown as Presentation;
 }
 
-export const isLocalUrl = (url: string) => url.startsWith('/media/') || url.startsWith('blob:') || url.startsWith('data:');
+/** Recursos servidos por la propia app (subidas, animaciones incluidas) o ya en memoria. */
+export const isLocalUrl = (url: string) =>
+  (url.startsWith('/') && !url.startsWith('//')) || url.startsWith('blob:') || url.startsWith('data:');
 
 /** Texto visible de todo el documento (para subconjuntos de fuentes). */
 export function collectText(doc: Presentation): string {

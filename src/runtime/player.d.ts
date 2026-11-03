@@ -13,6 +13,7 @@ export interface PlayerOptions {
   exitOnFullscreenEnd?: boolean;
   onExit?: (() => void) | null;
   onChange?: ((index: number, step: number) => void) | null;
+  music?: { src: string; volume?: number; loop?: boolean } | null;
 }
 export interface PlayerInstance {
   next(): void;
@@ -31,3 +32,4 @@ export const lumenSound: {
   setVolume(v: number): void;
   names: string[];
 };
+export function countUp(container: Element, duration: number, delay?: number): () => void;

@@ -26,6 +26,7 @@ export function PresentMode() {
       progress: frozen.settings.progress,
       slideNumbers: frozen.settings.slideNumbers,
       sounds: frozen.settings.sounds,
+      music: frozen.settings.music.src ? frozen.settings.music : null,
       controls: true,
       startIndex: presenting.start,
       exitButton: true,

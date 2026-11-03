@@ -32,12 +32,13 @@ import {
   Group,
   Ungroup,
   Table2,
+  Clapperboard,
   AlignHorizontalSpaceAround,
   AlignVerticalSpaceAround,
 } from 'lucide-react';
 import type { Command } from '../../../core/commands';
 import { SHAPES, BLEND_MODES, MASKS, type SlideElement } from '../../../core/model';
-import { FONTS, STOCK_IMAGES, STOCK_VIDEOS } from '../../../core/themes';
+import { BUILTIN_LOTTIE, FONTS, STOCK_IMAGES, STOCK_VIDEOS } from '../../../core/themes';
 import { CLIP_SHAPES } from '../../../render/styles';
 import { pickFile, uploadAsset } from '../../lib/assets';
 import { sfx } from '../../lib/sound';
@@ -59,6 +60,7 @@ const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type
   embed: { label: 'Incrustado', icon: Globe },
   chart: { label: 'Gráfico', icon: ChartColumn },
   table: { label: 'Tabla', icon: Table2 },
+  lottie: { label: 'Animación Lottie', icon: Clapperboard },
 };
 
 const SHADOWS: { id: string; label: string; value: null | { x: number; y: number; blur: number; spread: number; color: string } }[] = [
@@ -472,6 +474,36 @@ export function ElementInspector({ elements }: { elements: SlideElement[] }) {
 
       {!multi && el.type === 'chart' && <ChartEditor el={el} patch={patch} />}
       {!multi && el.type === 'table' && <TableEditor el={el} patch={patch} />}
+
+      {!multi && el.type === 'lottie' && (
+        <Section title="Animación Lottie" id="el-lottie">
+          <div className="chips">
+            {BUILTIN_LOTTIE.map((l) => (
+              <button key={l.src} className={`chip${el.src === l.src ? ' is-active' : ''}`} onClick={() => patch({ src: l.src })}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <Row label="URL .json">
+            <TextInput value={el.src} onCommit={(v) => patch({ src: v })} placeholder="https://…/animacion.json" mono />
+          </Row>
+          <div className="btn-row">
+            <button className="btn soft" onClick={() => replaceMedia('application/json,.json')}>
+              <Upload size={14} /> Subir .json
+            </button>
+            <a className="btn ghost" href="https://lottiefiles.com/free-animations" target="_blank" rel="noreferrer">
+              Explorar LottieFiles ↗
+            </a>
+          </div>
+          <Row label="Repetir">
+            <Switch checked={el.loop} onChange={(v) => patch({ loop: v })} />
+          </Row>
+          <Row label="Velocidad">
+            <Slider value={el.speed} min={0.1} max={3} step={0.1} precision={1} unit="×" onChange={(v) => patch({ speed: v }, 'lspeed')} />
+          </Row>
+          <p className="hint">En LottieFiles copia la URL de «Lottie JSON» de cualquier animación gratuita.</p>
+        </Section>
+      )}
 
       {!multi && el.type === 'embed' && (
         <Section title="Contenido incrustado" id="el-embed">
