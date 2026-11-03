@@ -4,6 +4,7 @@
  *   que los cambios hechos por una IA (REST, MCP o asistente) aparecen en vivo.
  * - Sin servidor: guarda en localStorage.
  */
+import { merge3 } from '../../core/merge';
 import { normalizePresentation, uid, type Presentation } from '../../core/model';
 import { createFromTemplate } from '../../core/templates';
 import { useEditor } from '../store/editor';
@@ -13,6 +14,8 @@ const LOCAL_INDEX = 'lumen:docs';
 const localKey = (id: string) => `lumen:doc:${id}`;
 
 let serverRev = 0;
+/** Último estado conocido del servidor: base para fusionar cambios concurrentes. */
+let baseDoc: Presentation | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let events: EventSource | null = null;
 let lastSavedVersion = 0;
@@ -112,6 +115,7 @@ export async function openDoc(id: string): Promise<boolean> {
 function activate(doc: Presentation) {
   clearTimeout(saveTimer);
   serverRev = doc.rev ?? 0;
+  baseDoc = doc;
   useEditor.getState().setDoc(doc, { resetHistory: true, remote: true });
   useEditor.setState({ currentSlideId: doc.slides[0]?.id ?? '', selection: [] });
   lastSavedVersion = useEditor.getState().localVersion;
@@ -133,15 +137,34 @@ function connectEvents(id: string) {
       if (evt.type !== 'doc' || evt.doc.id !== useEditor.getState().doc.id) return;
       serverRev = Math.max(serverRev, evt.doc.rev);
       if (evt.origin === CLIENT_ID) return;
-      useEditor.getState().setDoc(normalizePresentation(evt.doc), { remote: true });
-      lastSavedVersion = useEditor.getState().localVersion;
-      useEditor.setState({ sync: 'saved' });
+      receiveRemote(normalizePresentation(evt.doc));
     } catch {
       /* evento malformado */
     }
   };
   events.onerror = () => useEditor.setState({ sync: 'error' });
   events.onopen = () => useEditor.setState({ sync: 'saved' });
+}
+
+/**
+ * Integra un documento remoto. Si hay ediciones locales pendientes de guardar,
+ * se fusionan a tres bandas para no perder ninguno de los dos lados.
+ */
+function receiveRemote(remote: Presentation) {
+  const st = useEditor.getState();
+  const pending = st.localVersion !== lastSavedVersion;
+  if (pending && baseDoc) {
+    const merged = normalizePresentation(merge3<unknown>(baseDoc, st.doc, remote));
+    baseDoc = remote;
+    st.setDoc({ ...merged, rev: remote.rev }, { remote: true });
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 300);
+  } else {
+    baseDoc = remote;
+    st.setDoc(remote, { remote: true });
+    lastSavedVersion = useEditor.getState().localVersion;
+    useEditor.setState({ sync: 'saved' });
+  }
 }
 
 async function flush() {
@@ -169,16 +192,17 @@ async function flush() {
       body: JSON.stringify({ document: doc, baseRev: serverRev }),
     });
     if (res.status === 409) {
+      // Otro cliente guardó antes: fusionamos y reintentamos.
       const data = (await res.json()) as { document: Presentation };
       serverRev = data.document.rev;
-      useEditor.getState().setDoc(normalizePresentation(data.document), { remote: true });
-      useEditor.getState().toast('Se recibieron cambios remotos; el documento se actualizó.', 'info');
-    } else {
-      const data = await json<{ rev: number }>(res);
-      serverRev = Math.max(serverRev, data.rev);
+      receiveRemote(normalizePresentation(data.document));
+      return;
     }
+    const data = await json<{ rev: number }>(res);
+    serverRev = Math.max(serverRev, data.rev);
+    baseDoc = doc;
     lastSavedVersion = version;
-    useEditor.setState({ sync: 'saved' });
+    useEditor.setState({ sync: useEditor.getState().localVersion === version ? 'saved' : 'saving' });
   } catch {
     useEditor.setState({ sync: 'error' });
     saveTimer = setTimeout(flush, 3000);

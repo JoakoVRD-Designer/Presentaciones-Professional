@@ -131,3 +131,38 @@ describe('modelo y utilidades', () => {
     expect(sanitizeHtml('<font color="#f00">x</font>')).toBe('<span style="color: #f00">x</span>');
   });
 });
+
+import { merge3 } from '../src/core/merge';
+
+describe('fusión a tres bandas', () => {
+  const base = createFromTemplate('blank');
+  const sid = base.slides[0].id;
+  const eid = base.slides[0].elements[0].id;
+
+  it('conserva un cambio local y una diapositiva añadida remotamente', () => {
+    const local = applyCommands(base, [{ op: 'element.update', element: eid, patch: { x: 999 } }]).doc;
+    const remote = applyCommands(base, [{ op: 'slide.add', layout: 'quote', id: 'remota' }]).doc;
+    const merged = merge3(base, local, remote);
+    expect(merged.slides.map((s) => s.id)).toEqual([sid, 'remota']);
+    expect(merged.slides[0].elements.find((e) => e.id === eid)!.x).toBe(999);
+  });
+
+  it('combina cambios en campos distintos del mismo elemento y respeta borrados', () => {
+    const local = applyCommands(base, [
+      { op: 'element.update', element: eid, patch: { y: 5 } },
+      { op: 'slide.add', layout: 'blank', id: 'local' },
+    ]).doc;
+    const remote = applyCommands(base, [
+      { op: 'element.style', element: eid, style: { blur: 7 } },
+      { op: 'element.add', slide: 0, element: { type: 'icon', id: 'ic' } },
+    ]).doc;
+    const merged = merge3(base, local, remote);
+    const el = merged.slides[0].elements.find((e) => e.id === eid)!;
+    expect(el.y).toBe(5);
+    expect(el.style.blur).toBe(7);
+    expect(merged.slides[0].elements.some((e) => e.id === 'ic')).toBe(true);
+    expect(merged.slides.map((s) => s.id)).toEqual([sid, 'local']);
+    const removed = applyCommands(base, [{ op: 'element.delete', element: eid }]).doc;
+    expect(merge3(base, removed, remote).slides[0].elements.some((e) => e.id === eid)).toBe(false);
+  });
+});

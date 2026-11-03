@@ -181,7 +181,7 @@ export function SlideRail() {
       </div>
       <div className="rail-foot">
         <Popover
-          width={520}
+          width={580}
           side="right"
           trigger={({ toggle, ref }) => (
             <motion.button
