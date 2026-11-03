@@ -40,6 +40,10 @@ export const LayoutContentSchema = z
       })
       .optional()
       .describe('Datos para la plantilla "chart".'),
+    table: z
+      .array(z.array(z.string()))
+      .optional()
+      .describe('Filas de la tabla para la plantilla "table" (la primera es el encabezado).'),
     columns: z
       .array(z.object({ title: z.string(), body: z.string() }))
       .optional()
@@ -848,6 +852,55 @@ export const LAYOUTS: LayoutDef[] = [
             w: 840,
             h: 660,
             fontSize: 24,
+            animation: anim('fade', 200),
+          } as ElementInput,
+        ],
+      };
+    },
+  },
+  {
+    id: 'table',
+    name: 'Tabla',
+    description: 'Título y una tabla comparativa (content.table: filas de celdas; la primera es el encabezado).',
+    build: (c) => {
+      const rows = c.table ?? [
+        ['', 'Básico', 'Pro', 'Empresa'],
+        ['Precio', '$9', '$29', 'A medida'],
+        ['Usuarios', '1', '10', 'Ilimitados'],
+        ['Soporte', 'Email', 'Prioritario', 'Dedicado'],
+      ];
+      const h = Math.min(640, 110 * rows.length);
+      return {
+        name: 'Tabla',
+        background: { type: 'effect', effect: 'mesh', overlayOpacity: 0.55 },
+        transition: { type: 'fade' },
+        elements: [
+          ...kicker(c.kicker, M, 140),
+          T(c.title ?? 'Compara opciones', {
+            name: 'Título',
+            role: 'heading',
+            x: M,
+            y: 190,
+            w: W - 2 * M,
+            h: 130,
+            size: 80,
+            weight: 700,
+            letterSpacing: -2,
+            animation: anim('fade-up'),
+          }),
+          {
+            type: 'table',
+            name: 'Tabla',
+            rows,
+            firstColumn: true,
+            highlightColumn: rows[0].length > 2 ? rows[0].length - 2 : -1,
+            align: 'center',
+            fontSize: 30,
+            x: M,
+            y: 380,
+            w: W - 2 * M,
+            h,
+            style: { fill: 'var(--lm-surface)', radius: 24, backdropBlur: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
             animation: anim('fade', 200),
           } as ElementInput,
         ],

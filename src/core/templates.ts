@@ -146,6 +146,21 @@ const pitch: Command[] = [
   },
   {
     op: 'slide.add',
+    layout: 'table',
+    content: {
+      kicker: 'Modelo de negocio',
+      title: 'Planes y precios',
+      table: [
+        ['', 'Starter', 'Growth', 'Enterprise'],
+        ['Precio / mes', '$0', '$49', 'A medida'],
+        ['Usuarios', '3', '25', 'Ilimitados'],
+        ['IA incluida', '—', '✓', '✓'],
+        ['Soporte', 'Comunidad', 'Prioritario', 'Dedicado'],
+      ],
+    },
+  },
+  {
+    op: 'slide.add',
     layout: 'timeline',
     content: {
       title: 'Hoja de ruta',

@@ -897,3 +897,11 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .series-head { position: relative; }
 .series-head .grid-x { position: absolute; right: -4px; top: -10px; width: 16px; height: 16px; border-radius: 50%; background: var(--ui-raised); opacity: 0; transition: opacity 0.15s; }
 .series-head:hover .grid-x { opacity: 1; }
+.group-frame { position: absolute; pointer-events: none; border: 1px dashed rgba(124, 92, 255, 0.7); border-radius: 6px; }
+.group-frame.is-group { border-style: solid; border-color: rgba(34, 211, 238, 0.8); }
+.group-badge { position: absolute; left: -1px; top: -20px; padding: 2px 7px; border-radius: 5px 5px 5px 0; background: #0ea5c4; color: #fff; font: 600 10px/1.3 Inter, sans-serif; }
+.layer-group { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-accent-2); flex: none; }
+.align-bar .icon-btn.has-label { flex: 1.6; }
+.grid-cell.head { font-weight: 700; background: rgba(124, 92, 255, 0.12); }
+.col-x { justify-self: center; opacity: 0.5; }
+.col-x:hover { opacity: 1; }

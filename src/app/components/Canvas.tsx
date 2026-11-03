@@ -17,7 +17,7 @@ import { sanitizeHtml } from '../../core/sanitize';
 import { SlideRenderer } from '../../render/SlideRenderer';
 import { mediaSize, uploadAsset } from '../lib/assets';
 import { sfx } from '../lib/sound';
-import { useCurrentSlide, useEditor } from '../store/editor';
+import { expandGroups, useCurrentSlide, useEditor } from '../store/editor';
 import { ContextMenu, type MenuItem } from './ui/Popover';
 
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -121,13 +121,16 @@ export function Canvas() {
     if (st.editingId === el.id) return;
     if (st.editingId) st.setEditing(null);
     let ids = st.selection;
+    // Alt = seleccionar un elemento dentro de su grupo.
+    const picked = e.altKey ? [el.id] : expandGroups([el.id]);
     if (e.shiftKey || e.metaKey || e.ctrlKey) {
-      st.toggleSelect(el.id);
+      const has = ids.includes(el.id);
+      st.select(has ? ids.filter((x) => !picked.includes(x)) : [...new Set([...ids, ...picked])]);
       return;
     }
     if (!ids.includes(el.id)) {
-      st.select([el.id]);
-      ids = [el.id];
+      st.select(picked);
+      ids = picked;
       sfx('tick');
     }
     const movable = slide.elements.filter((x) => ids.includes(x.id) && !x.locked);
@@ -284,7 +287,7 @@ export function Canvas() {
       const hit = slide.elements
         .filter((el) => el.x < rect.x + rect.w && el.x + el.w > rect.x && el.y < rect.y + rect.h && el.y + el.h > rect.y)
         .map((el) => el.id);
-      useEditor.setState({ selection: [...new Set([...base, ...hit])], panel: 'design' });
+      useEditor.setState({ selection: expandGroups([...new Set([...base, ...hit])]), panel: 'design' });
     };
     const up = () => {
       setMarquee(null);
@@ -497,6 +500,21 @@ export function Canvas() {
             </div>
           ))}
 
+          {selected.length > 1 && (() => {
+            const l = Math.min(...selected.map((e) => e.x));
+            const t = Math.min(...selected.map((e) => e.y));
+            const r = Math.max(...selected.map((e) => e.x + e.w));
+            const b = Math.max(...selected.map((e) => e.y + e.h));
+            const grouped = selected.every((e) => e.group && e.group === selected[0].group);
+            return (
+              <div
+                className={`group-frame${grouped ? ' is-group' : ''}`}
+                style={{ left: l * scale - 6, top: t * scale - 6, width: (r - l) * scale + 12, height: (b - t) * scale + 12 }}
+              >
+                {grouped && <span className="group-badge">Grupo</span>}
+              </div>
+            );
+          })()}
           {guides.v.map((x, i) => (
             <div key={`gv${i}`} className="guide guide-v" style={{ left: x * scale }} />
           ))}

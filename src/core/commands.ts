@@ -150,6 +150,17 @@ export const CommandSchema = z.discriminatedUnion('op', [
     })
     .describe('Mueve un elemento a otra diapositiva.'),
   z
+    .object({ op: z.literal('elements.group'), elements: z.array(ElementRef).min(2) })
+    .describe('Agrupa elementos de una misma diapositiva: se seleccionan y mueven juntos.'),
+  z.object({ op: z.literal('elements.ungroup'), elements: z.array(ElementRef).min(1) }).describe('Desagrupa elementos.'),
+  z
+    .object({
+      op: z.literal('elements.distribute'),
+      elements: z.array(ElementRef).min(3),
+      axis: z.enum(['horizontal', 'vertical']),
+    })
+    .describe('Reparte los elementos con el mismo espacio entre ellos.'),
+  z
     .object({ op: z.literal('document.replace'), document: Patch })
     .describe('Reemplaza el documento completo (se valida y completa).'),
 ]);
@@ -410,6 +421,35 @@ function applyOne(draft: Draft<Presentation>, cmd: ParsedCommand): string | unde
       target.elements.push(el);
       return el.id;
     }
+    case 'elements.group':
+    case 'elements.ungroup': {
+      const gid = cmd.op === 'elements.group' ? uid('g') : '';
+      for (const id of cmd.elements) {
+        const { slide, index } = findElement(draft, id);
+        slide.elements[index].group = gid;
+      }
+      return gid || undefined;
+    }
+    case 'elements.distribute': {
+      const items = cmd.elements.map((id) => {
+        const { slide, index } = findElement(draft, id);
+        return slide.elements[index];
+      });
+      const h = cmd.axis === 'horizontal';
+      items.sort((a, b) => (h ? a.x - b.x : a.y - b.y));
+      const first = items[0];
+      const last = items[items.length - 1];
+      const span = h ? last.x + last.w - first.x : last.y + last.h - first.y;
+      const total = items.reduce((sum, e) => sum + (h ? e.w : e.h), 0);
+      const gap = (span - total) / (items.length - 1);
+      let pos = h ? first.x : first.y;
+      for (const e of items) {
+        if (h) e.x = Math.round(pos);
+        else e.y = Math.round(pos);
+        pos += (h ? e.w : e.h) + gap;
+      }
+      return undefined;
+    }
     case 'document.replace': {
       const next = normalizePresentation({ ...cmd.document, id: draft.id, rev: draft.rev });
       Object.assign(draft, next);
@@ -503,6 +543,7 @@ export function summarizePresentation(doc: Presentation): unknown {
         ...(e.type === 'image' || e.type === 'video' ? { src: e.src } : {}),
         ...(e.type === 'icon' ? { icon: e.icon } : {}),
         ...(e.type === 'shape' ? { shape: e.shape, fill: e.style.fill } : {}),
+        ...(e.type === 'table' ? { rows: e.rows.slice(0, 8) } : {}),
         ...(e.type === 'chart' ? { chart: e.chart, labels: e.labels, series: e.series.map((s) => ({ name: s.name, values: s.values })) } : {}),
         entrance: e.animation.entrance,
         step: e.animation.step || undefined,
@@ -543,6 +584,8 @@ Cada comando devuelve { ok, op, id, error }. Si uno falla los demás continúan.
 - Texto con degradado: text.gradient = "linear-gradient(...)".
 - Gráficos: element.add con { type: "chart", chart: "column"|"bar"|"line"|"area"|"donut"|"pie",
   labels: [...], series: [{ name, values: [...] }], prefix, suffix }, o la plantilla "chart".
+- Tablas: { type: "table", rows: [["Plan","Precio"],["Pro","$29"]], highlightColumn: 1 } o la plantilla "table".
+- Agrupa con elements.group y reparte con elements.distribute.
 - Iconos: nombres Lucide en PascalCase (Rocket, Sparkles, ChartLine, Users, Globe,
   ShieldCheck, Zap, BrainCircuit, Target, Lightbulb, Heart, Star, TrendingUp...).
 - Mantén márgenes de ~140 px y buen contraste.

@@ -241,3 +241,13 @@ export function currentSlideIndex(): number {
   const { doc, currentSlideId } = useEditor.getState();
   return Math.max(0, doc.slides.findIndex((s) => s.id === currentSlideId));
 }
+
+/** Amplía una lista de ids con todos los miembros de sus grupos (en la diapositiva actual). */
+export function expandGroups(ids: string[]): string[] {
+  const { doc, currentSlideId } = useEditor.getState();
+  const slide = doc.slides.find((s) => s.id === currentSlideId);
+  if (!slide) return ids;
+  const groups = new Set(slide.elements.filter((e) => ids.includes(e.id) && e.group).map((e) => e.group));
+  if (!groups.size) return ids;
+  return [...new Set([...ids, ...slide.elements.filter((e) => groups.has(e.group)).map((e) => e.id)])];
+}

@@ -136,6 +136,10 @@ export function insertChart(kind: string) {
   insertElement({ ...(CHART_SAMPLES[kind] ?? CHART_SAMPLES.column), animation: { entrance: 'fade' } } as ElementInput);
 }
 
+export function insertTable() {
+  insertElement({ type: 'table', name: 'Tabla', w: 1200, h: 440, style: { radius: 16 }, animation: { entrance: 'fade' } } as ElementInput);
+}
+
 export function insertIcon(icon: string) {
   insertElement({ type: 'icon', icon, name: icon, w: 160, h: 160, animation: { entrance: 'zoom-in', easing: 'spring', loop: 'float' } });
 }

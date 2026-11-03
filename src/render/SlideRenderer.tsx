@@ -2,6 +2,7 @@ import { icons, type LucideIcon } from 'lucide-react';
 import { memo, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { Background, Slide, SlideElement, Theme } from '../core/model';
 import { ChartView } from './Chart';
+import { TableView } from './Table';
 import { sanitizeHtml } from '../core/sanitize';
 import {
   CLIP_SHAPES,
@@ -287,6 +288,8 @@ function ElementContent({
     }
     case 'chart':
       return <ChartView el={el} />;
+    case 'table':
+      return <TableView el={el} />;
     case 'embed':
       if (!el.url || mode === 'thumb') {
         return (

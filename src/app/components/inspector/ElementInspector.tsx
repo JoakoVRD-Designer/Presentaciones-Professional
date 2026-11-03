@@ -29,6 +29,11 @@ import {
   Globe,
   CaseUpper,
   ChartColumn,
+  Group,
+  Ungroup,
+  Table2,
+  AlignHorizontalSpaceAround,
+  AlignVerticalSpaceAround,
 } from 'lucide-react';
 import type { Command } from '../../../core/commands';
 import { SHAPES, BLEND_MODES, MASKS, type SlideElement } from '../../../core/model';
@@ -42,6 +47,7 @@ import { IconButton } from '../ui/IconButton';
 import { ColorInput, Grid, NumberInput, Row, Section, Segmented, Select, Slider, Switch, TextInput } from '../ui/fields';
 import { Popover } from '../ui/Popover';
 import { ChartEditor } from './ChartEditor';
+import { TableEditor } from './TableEditor';
 import { BLEND_LABELS, MASK_LABELS, SHAPE_LABELS, toEmbedUrl, useElementPatch } from './common';
 
 const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type }> = {
@@ -52,6 +58,7 @@ const TYPE_META: Record<SlideElement['type'], { label: string; icon: typeof Type
   icon: { label: 'Icono', icon: Sparkles },
   embed: { label: 'Incrustado', icon: Globe },
   chart: { label: 'Gráfico', icon: ChartColumn },
+  table: { label: 'Tabla', icon: Table2 },
 };
 
 const SHADOWS: { id: string; label: string; value: null | { x: number; y: number; blur: number; spread: number; color: string } }[] = [
@@ -181,6 +188,34 @@ export function ElementInspector({ elements }: { elements: SlideElement[] }) {
           <IconButton icon={ArrowUpToLine} label="Traer al frente" kbd="]" size={15} anim="up" onClick={() => all((id) => ({ op: 'element.arrange', element: id, action: 'front' }))} />
           <IconButton icon={ArrowDownToLine} label="Enviar al fondo" kbd="[" size={15} anim="down" onClick={() => all((id) => ({ op: 'element.arrange', element: id, action: 'back' }))} />
         </div>
+        {multi && (
+          <div className="align-bar">
+            {elements.every((e) => e.group && e.group === el.group) ? (
+              <IconButton icon={Ungroup} label="Desagrupar" kbd="⇧⌘G" size={15} anim="pop" onClick={() => dispatch([{ op: 'elements.ungroup', elements: ids }])}>
+                Desagrupar
+              </IconButton>
+            ) : (
+              <IconButton icon={Group} label="Agrupar" kbd="⌘G" size={15} anim="pop" onClick={() => dispatch([{ op: 'elements.group', elements: ids }])}>
+                Agrupar
+              </IconButton>
+            )}
+            <span className="bar-sep" />
+            <IconButton
+              icon={AlignHorizontalSpaceAround}
+              label="Distribuir horizontalmente"
+              size={15}
+              disabled={elements.length < 3}
+              onClick={() => dispatch([{ op: 'elements.distribute', elements: ids, axis: 'horizontal' }])}
+            />
+            <IconButton
+              icon={AlignVerticalSpaceAround}
+              label="Distribuir verticalmente"
+              size={15}
+              disabled={elements.length < 3}
+              onClick={() => dispatch([{ op: 'elements.distribute', elements: ids, axis: 'vertical' }])}
+            />
+          </div>
+        )}
         {!multi && (
           <Grid cols={2}>
             <NumberInput label="X" value={el.x} onChange={(v) => patch({ x: v }, 'x')} />
@@ -436,6 +471,7 @@ export function ElementInspector({ elements }: { elements: SlideElement[] }) {
       )}
 
       {!multi && el.type === 'chart' && <ChartEditor el={el} patch={patch} />}
+      {!multi && el.type === 'table' && <TableEditor el={el} patch={patch} />}
 
       {!multi && el.type === 'embed' && (
         <Section title="Contenido incrustado" id="el-embed">

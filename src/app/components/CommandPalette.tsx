@@ -40,6 +40,7 @@ import {
   insertElement,
   insertChart,
   insertGlassCard,
+  insertTable,
   insertMedia,
   insertShape,
   present,
@@ -128,6 +129,7 @@ export function CommandPalette() {
                     <Item key={s} icon={<Shapes size={15} />} label={`Forma: ${SHAPE_LABELS[s]}`} onSelect={() => insertShape(s)} />
                   ))}
                   <Item icon={<Shapes size={15} />} label="Tarjeta de vidrio" onSelect={insertGlassCard} keywords={['glass']} />
+                  <Item icon={<Shapes size={15} />} label="Tabla" onSelect={insertTable} keywords={['table', 'tabla', 'datos']} />
                   {['column', 'bar', 'line', 'area', 'donut', 'pie'].map((k) => (
                     <Item key={k} icon={<Shapes size={15} />} label={`Gráfico: ${k}`} onSelect={() => insertChart(k)} keywords={['chart', 'grafico', 'datos']} />
                   ))}

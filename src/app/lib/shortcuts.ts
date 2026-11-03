@@ -76,6 +76,19 @@ export function useShortcuts() {
         st.redo();
         return;
       }
+      if (mod && key === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (sel.some((x) => x.group)) {
+            st.dispatch([{ op: 'elements.ungroup', elements: sel.map((x) => x.id) }]);
+            sfx('tap');
+          }
+        } else if (sel.length > 1) {
+          st.dispatch([{ op: 'elements.group', elements: sel.map((x) => x.id) }]);
+          sfx('pop');
+        }
+        return;
+      }
       if (mod && key === 'a') {
         e.preventDefault();
         st.select(slide?.elements.map((x) => x.id) ?? []);

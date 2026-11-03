@@ -12,6 +12,7 @@ import {
   Sparkles,
   Type,
   Unlock,
+  Table2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlideElement } from '../../../core/model';
@@ -28,6 +29,7 @@ const TYPE_ICON: Record<SlideElement['type'], typeof Type> = {
   icon: Sparkles,
   embed: Globe,
   chart: ChartColumn,
+  table: Table2,
 };
 
 function labelOf(el: SlideElement): string {
@@ -35,7 +37,7 @@ function labelOf(el: SlideElement): string {
   if (el.type === 'text') return htmlToPlainText(el.html).slice(0, 40) || 'Texto';
   if (el.type === 'icon') return el.icon;
   if (el.type === 'chart') return `Gráfico (${el.chart})`;
-  return { image: 'Imagen', video: 'Video', shape: 'Forma', embed: 'Web' }[el.type] ?? el.type;
+  return ({ image: 'Imagen', video: 'Video', shape: 'Forma', embed: 'Web', table: 'Tabla' } as Record<string, string>)[el.type] ?? el.type;
 }
 
 function LayerName({ el }: { el: SlideElement }) {
@@ -134,7 +136,8 @@ export function LayersPanel() {
               }}
               onClick={(e) => {
                 sfx('tick');
-                if (e.shiftKey || e.metaKey || e.ctrlKey) useEditor.getState().toggleSelect(id);
+                if (e.altKey) useEditor.getState().select([id]);
+                else if (e.shiftKey || e.metaKey || e.ctrlKey) useEditor.getState().toggleSelect(id);
                 else useEditor.getState().select([id]);
               }}
             >
@@ -143,6 +146,7 @@ export function LayersPanel() {
                 <Icon size={13} />
               </span>
               <LayerName el={el} />
+              {el.group && <span className="layer-group" title="Pertenece a un grupo" />}
               {el.animation.entrance !== 'none' && (
                 <span className="layer-anim" title={`Entrada: ${ENTRANCE_LABELS[el.animation.entrance]}`}>
                   {el.animation.step > 0 ? `clic ${el.animation.step}` : '✦'}

@@ -33,6 +33,7 @@ import {
   ChartPie,
   Printer,
   Keyboard,
+  Table2,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
 import { STOCK_IMAGES, STOCK_VIDEOS } from '../../core/themes';
@@ -46,6 +47,7 @@ import {
   insertGlassCard,
   insertChart,
   insertIcon,
+  insertTable,
   insertMedia,
   insertShape,
   present,
@@ -283,7 +285,7 @@ export function TopBar() {
             />
           )}
         </InsertButton>
-        <InsertButton icon={ChartColumn} label="Gráfico" width={300}>
+        <InsertButton icon={ChartColumn} label="Datos" width={300}>
           {(close) => (
             <div className="pop-pad">
               <div className="chart-kinds">
@@ -310,6 +312,15 @@ export function TopBar() {
                   </button>
                 ))}
               </div>
+              <button
+                className="btn soft wide"
+                onClick={() => {
+                  insertTable();
+                  close();
+                }}
+              >
+                <Table2 size={14} /> Tabla
+              </button>
               <p className="hint">Edita los datos en el inspector o pega una tabla desde Excel / Sheets.</p>
             </div>
           )}

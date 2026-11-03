@@ -192,3 +192,44 @@ describe('gráficos y capas', () => {
     expect(doc.slides[0].elements.map((e) => e.id)).toEqual(['c', 'b', 'a']);
   });
 });
+
+describe('tablas, grupos y distribución', () => {
+  it('crea tablas y la plantilla table', () => {
+    const { doc, results } = applyCommands(blank(), [
+      { op: 'slide.add', layout: 'table', content: { title: 'Precios', table: [['A', 'B'], ['1', '2']] } },
+      { op: 'element.add', slide: 0, element: { type: 'table', id: 't' } },
+      { op: 'element.update', element: 't', patch: { rows: [['x', 'y', 'z']], highlightColumn: 2 } },
+    ]);
+    expect(results.every((r) => r.ok)).toBe(true);
+    const t = doc.slides[0].elements.find((e) => e.id === 't')!;
+    expect(t.type === 'table' && t.rows[0]).toEqual(['x', 'y', 'z']);
+  });
+
+  it('agrupa, desagrupa y distribuye', () => {
+    const { doc } = applyCommands(blank(), [
+      { op: 'slide.add' },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'a', x: 0, w: 100 } },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'b', x: 150, w: 100 } },
+      { op: 'element.add', slide: 0, element: { type: 'shape', id: 'c', x: 900, w: 100 } },
+      { op: 'elements.group', elements: ['a', 'b'] },
+      { op: 'elements.distribute', elements: ['a', 'b', 'c'], axis: 'horizontal' },
+    ]);
+    const [a, b, c] = doc.slides[0].elements;
+    expect(a.group).toBeTruthy();
+    expect(a.group).toBe(b.group);
+    expect(c.group).toBe('');
+    expect(b.x).toBe(450);
+    const un = applyCommands(doc, [{ op: 'elements.ungroup', elements: ['a', 'b'] }]).doc;
+    expect(un.slides[0].elements[0].group).toBe('');
+  });
+
+  it('duplicar una diapositiva enlaza los elementos para Morph', () => {
+    const { doc } = applyCommands(blank(), [
+      { op: 'slide.add', id: 's' },
+      { op: 'element.add', slide: 's', element: { type: 'shape', id: 'orig' } },
+      { op: 'slide.duplicate', slide: 's' },
+    ]);
+    expect(doc.slides[1].elements[0].morph).toBe('orig');
+    expect(doc.slides[1].elements[0].id).not.toBe('orig');
+  });
+});

@@ -116,7 +116,7 @@ export const BLEND_MODES = [
 
 export const MASKS = ['none', 'fade-bottom', 'fade-top', 'fade-left', 'fade-right', 'fade-edges', 'circle'] as const;
 
-export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart'] as const;
+export const ELEMENT_TYPES = ['text', 'image', 'video', 'shape', 'icon', 'embed', 'chart', 'table'] as const;
 
 export const CHART_KINDS = ['bar', 'column', 'line', 'area', 'donut', 'pie'] as const;
 
@@ -325,6 +325,32 @@ export const ChartElementSchema = z
   })
   .describe('Gráfico de datos animado (SVG).');
 
+export const TableElementSchema = z
+  .object({
+    ...baseFields,
+    type: z.literal('table'),
+    rows: z
+      .array(z.array(z.string()))
+      .default([
+        ['Plan', 'Precio', 'Usuarios'],
+        ['Básico', '$9', '1'],
+        ['Pro', '$29', '10'],
+        ['Empresa', 'A medida', 'Ilimitados'],
+      ])
+      .describe('Celdas por filas; admite HTML simple (<b>, <i>, <span style="color">).'),
+    header: z.boolean().default(true).describe('La primera fila es encabezado.'),
+    firstColumn: z.boolean().default(false).describe('Resaltar la primera columna.'),
+    striped: z.boolean().default(true),
+    fontSize: num(26, 8, 120),
+    align: z.enum(['left', 'center', 'right']).default('left'),
+    textColor: z.string().default(''),
+    headerFill: z.string().default('').describe('Fondo del encabezado; vacío = primario del tema.'),
+    headerColor: z.string().default('#ffffff'),
+    lineColor: z.string().default('').describe('Color de líneas; vacío = sutil automático.'),
+    highlightColumn: z.number().int().default(-1).describe('Índice de columna a destacar (-1 = ninguna).'),
+  })
+  .describe('Tabla de datos.');
+
 export const ElementSchema = z.discriminatedUnion('type', [
   TextElementSchema,
   ImageElementSchema,
@@ -333,6 +359,7 @@ export const ElementSchema = z.discriminatedUnion('type', [
   IconElementSchema,
   EmbedElementSchema,
   ChartElementSchema,
+  TableElementSchema,
 ]);
 
 export const BackgroundSchema = z
@@ -450,7 +477,16 @@ export type IconElement = WithId<z.infer<typeof IconElementSchema>>;
 export type EmbedElement = WithId<z.infer<typeof EmbedElementSchema>>;
 export type ChartElement = WithId<z.infer<typeof ChartElementSchema>>;
 export type ChartKind = (typeof CHART_KINDS)[number];
-export type SlideElement = TextElement | ImageElement | VideoElement | ShapeElement | IconElement | EmbedElement | ChartElement;
+export type TableElement = WithId<z.infer<typeof TableElementSchema>>;
+export type SlideElement =
+  | TextElement
+  | ImageElement
+  | VideoElement
+  | ShapeElement
+  | IconElement
+  | EmbedElement
+  | ChartElement
+  | TableElement;
 export type ElementType = SlideElement['type'];
 export type ElementInput = z.input<typeof ElementSchema>;
 export type Background = z.infer<typeof BackgroundSchema>;
