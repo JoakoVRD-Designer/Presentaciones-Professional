@@ -961,3 +961,27 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .audio-actions { display: flex; gap: 4px; align-items: center; }
 .rec-btn.is-recording { border-color: rgba(255, 92, 122, 0.6); background: rgba(255, 92, 122, 0.16); color: #ffb3c1; font-variant-numeric: tabular-nums; }
 .rec-btn.is-recording svg { animation: ui-pulse 1s ease-in-out infinite; }
+
+/* ---------- Grabación ---------- */
+.cam-bubble { position: absolute; z-index: 30; border-radius: 50%; overflow: hidden; cursor: grab; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 20px 60px rgba(0, 0, 0, 0.5); }
+.cam-bubble video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.rec-badge { position: absolute; z-index: 31; top: 18px; right: 18px; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 0; border-radius: 99px; background: rgba(14, 14, 22, 0.7); color: #fff; font: 600 13px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; opacity: 0.35; transition: opacity 0.3s; backdrop-filter: blur(12px); }
+.rec-badge:hover { opacity: 1; }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 10px #ff3b5c; animation: ui-pulse 1.2s ease-in-out infinite; }
+
+/* ---------- Video ---------- */
+.video-dialog { display: flex; flex-direction: column; gap: 14px; }
+.video-studio, .video-record { display: flex; flex-direction: column; gap: 12px; }
+.video-hero { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: linear-gradient(135deg, rgba(124, 92, 255, 0.12), rgba(34, 211, 238, 0.06)); border: 1px solid rgba(124, 92, 255, 0.25); }
+.video-hero p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; }
+.video-hero > svg { flex: none; margin-top: 2px; color: #b9a8ff; }
+.video-job { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--ui-panel-2); border: 1px solid var(--ui-border); }
+.video-job.is-error { border-color: rgba(255, 92, 122, 0.4); color: #ffb3c1; }
+.video-job.is-done { border-color: rgba(52, 211, 153, 0.4); }
+.video-progress { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.video-progress i { display: block; height: 100%; border-radius: 6px; background: var(--ui-grad); box-shadow: 0 0 12px rgba(124, 92, 255, 0.6); }
+.video-job-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ui-text-2); }
+.video-preview { width: 100%; border-radius: 10px; background: #000; }
+.video-missing { display: flex; flex-direction: column; gap: 10px; }
+.rec-start { background: linear-gradient(135deg, #ff3b5c, #ff6b4a); box-shadow: 0 4px 16px rgba(255, 59, 92, 0.35); }
+.rec-start:hover { background: linear-gradient(135deg, #ff5370, #ff7d5f); }

@@ -6,6 +6,7 @@ import { Canvas } from './components/Canvas';
 import { CommandPalette } from './components/CommandPalette';
 import { DocsDialog } from './components/DocsDialog';
 import { ExportDialog } from './components/ExportDialog';
+import { VideoDialog } from './components/VideoDialog';
 import { FindDialog } from './components/FindDialog';
 import { HistoryDialog } from './components/HistoryDialog';
 import { HelpDialog } from './components/HelpDialog';
@@ -78,6 +79,7 @@ export function App() {
       <HelpDialog />
       <FindDialog />
       <ExportDialog />
+      <VideoDialog />
       <HistoryDialog />
       <PresentMode />
       <Toaster />

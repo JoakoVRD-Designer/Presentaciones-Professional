@@ -13,6 +13,7 @@ import { TEMPLATES } from '../src/core/templates';
 import { THEMES } from '../src/core/themes';
 import { AI_MODEL, aiAvailable, runAssistant, type AiEvent, type ChatTurn } from './ai';
 import { ASSETS_DIR, store, type DocEvent } from './store';
+import { cancelJob, defaultAppUrl, getJob, isSafeAppUrl, listJobs, startVideoJob, videoCapabilities, type VideoRenderOptions } from './video';
 
 const PORT = Number(process.env.PORT ?? 4317);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -61,6 +62,8 @@ app.get('/api', (_req, res) => {
       'GET /api/presentations/:id/history/:vid': 'Documento de una versión',
       'POST /api/presentations/:id/history/:vid/restore': 'Restaurar versión',
       'POST /api/assets': 'Subir archivo (cuerpo binario, cabecera Content-Type)',
+      'POST /api/presentations/:id/video': 'Renderizar MP4 { width, fps, secondsPerSlide, secondsPerStep, music, narration, sfx, quality }',
+      'GET /api/video/:job': 'Estado del render · GET /api/video/:job/file para descargar',
       'POST /api/ai/chat': 'Asistente IA { presentationId, prompt, history? } (stream SSE)',
     },
   });
@@ -172,6 +175,51 @@ app.get('/api/presentations/:id/events', (req, res) => {
     clearInterval(ping);
     store.off(`doc:${id}`, onDoc);
   });
+});
+
+/* ---------- Video MP4 de estudio ---------- */
+app.get('/api/video/capabilities', (_req, res) => res.json(videoCapabilities()));
+app.get('/api/video', (req, res) => res.json(listJobs(req.query.presentation ? String(req.query.presentation) : undefined)));
+app.post(
+  '/api/presentations/:id/video',
+  wrap(async (req, res) => {
+    const doc = await store.get(param(req, 'id'));
+    if (!doc) return res.status(404).json({ error: 'No encontrada' });
+    const caps = videoCapabilities();
+    if (!caps.available) return res.status(501).json({ error: `Faltan dependencias: ${caps.missing.join(', ')}` });
+    const b = (req.body ?? {}) as Partial<VideoRenderOptions> & { appUrl?: string };
+    const clamp = (v: unknown, min: number, max: number, def: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
+    const width = clamp(b.width, 320, 3840, 1920);
+    const options: VideoRenderOptions = {
+      width: Math.round(width / 2) * 2,
+      height: Math.round((width * (doc.height / doc.width)) / 2) * 2,
+      fps: [24, 25, 30, 50, 60].includes(Number(b.fps)) ? Number(b.fps) : 30,
+      secondsPerSlide: clamp(b.secondsPerSlide, 0.5, 120, 3.5),
+      secondsPerStep: clamp(b.secondsPerStep, 0.2, 30, 1.4),
+      music: b.music !== false,
+      narration: b.narration !== false,
+      sfx: b.sfx !== false,
+      quality: b.quality === 'draft' || b.quality === 'master' ? b.quality : 'high',
+    };
+    const appUrl = b.appUrl && isSafeAppUrl(b.appUrl) ? b.appUrl : defaultAppUrl(PORT);
+    res.status(202).json(startVideoJob(doc.id, doc.title, appUrl, options));
+  }),
+);
+app.get('/api/video/:job', (req, res) => {
+  const job = getJob(param(req, 'job'));
+  if (!job) return res.status(404).json({ error: 'Trabajo no encontrado' });
+  res.json(job);
+});
+app.delete('/api/video/:job', (req, res) => {
+  const job = cancelJob(param(req, 'job'));
+  if (!job) return res.status(404).json({ error: 'Trabajo no encontrado' });
+  res.json(job);
+});
+app.get('/api/video/:job/file', (req, res) => {
+  const job = getJob(param(req, 'job'));
+  if (!job?.file) return res.status(404).json({ error: 'Video no disponible' });
+  const name = `${job.title.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '-').replace(/^-|-$/g, '') || 'presentacion'}.mp4`;
+  res.download(job.file, name);
 });
 
 /* ---------- Archivos ---------- */

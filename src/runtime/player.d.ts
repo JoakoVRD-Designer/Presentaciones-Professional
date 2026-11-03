@@ -14,6 +14,8 @@ export interface PlayerOptions {
   onExit?: (() => void) | null;
   onChange?: ((index: number, step: number) => void) | null;
   music?: { src: string; volume?: number; loop?: boolean } | null;
+  /** Desactiva el avance automático (lo controla quien llama, p. ej. el render de video). */
+  manual?: boolean;
 }
 export interface PlayerInstance {
   next(): void;
@@ -30,6 +32,7 @@ export const lumenSound: {
   setEnabled(v: boolean): void;
   isEnabled(): boolean;
   setVolume(v: number): void;
+  schedule(ac: BaseAudioContext, destination: AudioNode, name: string, time: number, volume?: number): void;
   names: string[];
 };
 export function countUp(container: Element, duration: number, delay?: number): () => void;

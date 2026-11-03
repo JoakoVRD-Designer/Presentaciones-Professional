@@ -409,6 +409,7 @@ export function TopBar() {
               onDone={close}
               items={[
                 { label: 'Exportar presentación (.html)', icon: <FileCode2 size={14} />, kbd: '⌘E', onSelect: exportHtml },
+                { label: 'Video MP4 / grabar', icon: <Film size={14} />, onSelect: () => useEditor.setState({ videoOpen: true }) },
                 { label: 'PDF (imprimir)', icon: <Printer size={14} />, kbd: '⌘P', onSelect: exportPdf },
                 { label: 'Documento Lumen (.json)', icon: <FileJson size={14} />, onSelect: exportJson },
                 'sep',

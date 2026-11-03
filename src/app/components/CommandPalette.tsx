@@ -165,6 +165,7 @@ export function CommandPalette() {
                 </Command.Group>
                 <Command.Group heading="Archivo y preferencias">
                   <Item icon={<Download size={15} />} label="Exportar presentación (.html)" kbd="⌘E" onSelect={exportHtml} />
+                  <Item icon={<Film size={15} />} label="Exportar video MP4 (render de estudio)" onSelect={() => useEditor.setState({ videoOpen: true })} keywords={['video', 'mp4', 'render', 'grabar', 'record']} />
                   <Item icon={<Download size={15} />} label="Exportar PDF (imprimir)" kbd="⌘P" onSelect={exportPdf} keywords={['pdf', 'imprimir', 'print']} />
                   <Item icon={<FileJson size={15} />} label="Exportar JSON" onSelect={exportJson} />
                   <Item icon={<Wand2 size={15} />} label="Atajos de teclado" kbd="?" onSelect={() => useEditor.setState({ helpOpen: true })} keywords={['ayuda', 'help', 'shortcuts']} />

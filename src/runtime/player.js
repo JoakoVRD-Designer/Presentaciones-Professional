@@ -33,8 +33,13 @@ function noiseBuffer(ac, seconds) {
   return buf;
 }
 
+// Destino y tiempo base de la llamada actual (permite programar sonidos en un
+// OfflineAudioContext para la banda sonora del video).
+let routeTo = null;
+let timeBase = null;
+
 function tone(ac, { type = 'sine', from, to, start = 0, dur, gain = 0.3, attack = 0.005 }) {
-  const t0 = ac.currentTime + start;
+  const t0 = (timeBase === null ? ac.currentTime : timeBase) + start;
   const osc = ac.createOscillator();
   const g = ac.createGain();
   osc.type = type;
@@ -43,13 +48,13 @@ function tone(ac, { type = 'sine', from, to, start = 0, dur, gain = 0.3, attack 
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g).connect(master);
+  osc.connect(g).connect(routeTo || master);
   osc.start(t0);
   osc.stop(t0 + dur + 0.05);
 }
 
 function noise(ac, { dur, from, to, type = 'bandpass', q = 1.2, gain = 0.25, start = 0, attack = 0.04 }) {
-  const t0 = ac.currentTime + start;
+  const t0 = (timeBase === null ? ac.currentTime : timeBase) + start;
   const src = ac.createBufferSource();
   src.buffer = noiseBuffer(ac, dur + 0.1);
   const f = ac.createBiquadFilter();
@@ -61,7 +66,7 @@ function noise(ac, { dur, from, to, type = 'bandpass', q = 1.2, gain = 0.25, sta
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(f).connect(g).connect(master);
+  src.connect(f).connect(g).connect(routeTo || master);
   src.start(t0);
   src.stop(t0 + dur + 0.1);
 }
@@ -122,6 +127,21 @@ export const lumenSound = {
   setVolume(v) {
     soundVolume = Math.max(0, Math.min(1, v));
     if (master) master.gain.value = soundVolume;
+  },
+  /** Programa un sonido en cualquier contexto (p. ej. OfflineAudioContext) en un instante dado. */
+  schedule(ac, destination, name, time, volume) {
+    if (!name || name === 'none' || !SOUNDS[name]) return;
+    const g = ac.createGain();
+    g.gain.value = typeof volume === 'number' ? volume : 0.6;
+    g.connect(destination);
+    routeTo = g;
+    timeBase = time;
+    try {
+      SOUNDS[name](ac);
+    } finally {
+      routeTo = null;
+      timeBase = null;
+    }
   },
   names: Object.keys(SOUNDS),
 };
@@ -587,7 +607,7 @@ export function createPlayer(root, options) {
   function scheduleAuto() {
     clearTimeout(autoTimer);
     const f = frames[index];
-    if (!f) return;
+    if (!f || opts.manual) return;
     const secs = Number(f.dataset.duration) || opts.autoAdvance || 0;
     if (secs > 0) autoTimer = setTimeout(() => next(), secs * 1000);
   }
