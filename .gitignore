@@ -7,3 +7,5 @@ data/history/*
 .env
 *.log
 .DS_Store
+data/comments/*
+data/videos/*
