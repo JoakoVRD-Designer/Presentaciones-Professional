@@ -34,7 +34,6 @@ import {
   Printer,
   Keyboard,
   Table2,
-  Presentation,
   Share2,
 } from 'lucide-react';
 import { SHAPES } from '../../core/model';
@@ -44,7 +43,6 @@ import {
   exportHtml,
   exportJson,
   exportPdf,
-  exportPptx,
   shareLink,
   importJson,
   insertElement,
@@ -385,12 +383,11 @@ export function TopBar() {
             <MenuList
               onDone={close}
               items={[
-                { label: 'HTML autónomo (.html)', icon: <FileCode2 size={14} />, kbd: '⌘E', onSelect: exportHtml },
-                { label: 'PowerPoint (.pptx)', icon: <Presentation size={14} />, onSelect: exportPptx },
+                { label: 'Exportar presentación (.html)', icon: <FileCode2 size={14} />, kbd: '⌘E', onSelect: exportHtml },
                 { label: 'PDF (imprimir)', icon: <Printer size={14} />, kbd: '⌘P', onSelect: exportPdf },
                 { label: 'Documento Lumen (.json)', icon: <FileJson size={14} />, onSelect: exportJson },
                 'sep',
-                { label: 'Importar JSON / HTML…', icon: <FileUp size={14} />, onSelect: importJson },
+                { label: 'Abrir archivo .html / .json…', icon: <FileUp size={14} />, onSelect: importJson },
                 { label: 'Mis presentaciones', icon: <FolderOpen size={14} />, kbd: '⌘O', onSelect: () => useEditor.setState({ docsOpen: true }) },
                 { label: 'Historial de versiones', icon: <FolderOpen size={14} />, onSelect: () => useEditor.setState({ historyOpen: true }) },
                 { label: 'Buscar y reemplazar', icon: <Keyboard size={14} />, kbd: '⌘F', onSelect: () => useEditor.setState({ findOpen: true }) },

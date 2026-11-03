@@ -36,7 +36,6 @@ import {
   exportHtml,
   exportJson,
   exportPdf,
-  exportPptx,
   shareLink,
   importJson,
   insertElement,
@@ -165,12 +164,11 @@ export function CommandPalette() {
                   ))}
                 </Command.Group>
                 <Command.Group heading="Archivo y preferencias">
-                  <Item icon={<Download size={15} />} label="Exportar HTML autónomo" kbd="⌘E" onSelect={exportHtml} />
-                  <Item icon={<Download size={15} />} label="Exportar PowerPoint (.pptx)" onSelect={exportPptx} keywords={['pptx', 'powerpoint', 'keynote', 'google slides']} />
+                  <Item icon={<Download size={15} />} label="Exportar presentación (.html)" kbd="⌘E" onSelect={exportHtml} />
                   <Item icon={<Download size={15} />} label="Exportar PDF (imprimir)" kbd="⌘P" onSelect={exportPdf} keywords={['pdf', 'imprimir', 'print']} />
                   <Item icon={<FileJson size={15} />} label="Exportar JSON" onSelect={exportJson} />
                   <Item icon={<Wand2 size={15} />} label="Atajos de teclado" kbd="?" onSelect={() => useEditor.setState({ helpOpen: true })} keywords={['ayuda', 'help', 'shortcuts']} />
-                  <Item icon={<FileUp size={15} />} label="Importar JSON / HTML" onSelect={importJson} />
+                  <Item icon={<FileUp size={15} />} label="Abrir archivo .html / .json" onSelect={importJson} />
                   <Item icon={<Volume2 size={15} />} label="Activar/desactivar sonidos" onSelect={toggleSounds} />
                   <Item icon={<Wand2 size={15} />} label="Activar/desactivar animaciones en vivo" onSelect={toggleLive} />
                   <Item icon={<Plus size={15} />} label="Ajustar zoom a la ventana" kbd="⇧1" onSelect={() => useEditor.setState({ zoom: 'fit' })} />

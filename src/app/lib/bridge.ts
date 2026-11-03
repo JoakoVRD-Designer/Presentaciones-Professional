@@ -8,7 +8,7 @@
 import { API_GUIDE, commandJsonSchema, summarizePresentation, type Command } from '../../core/commands';
 import { LAYOUTS } from '../../core/layouts';
 import { THEMES } from '../../core/themes';
-import { buildPrintHtml, buildStandaloneHtml } from '../../render/exportHtml';
+import { buildPrintHtml, exportHtml, type ExportOptions } from '../../render/exportHtml';
 import { useEditor, currentSlideIndex } from '../store/editor';
 
 export interface LumenBrowserApi {
@@ -26,11 +26,12 @@ export interface LumenBrowserApi {
   goToSlide: (index: number) => void;
   present: (fromIndex?: number) => void;
   stopPresenting: () => void;
-  exportHtml: () => Promise<string>;
+  /** HTML autocontenido (formato de la presentación). */
+  exportHtml: (options?: ExportOptions) => Promise<string>;
   /** HTML paginado (una diapositiva por página) listo para imprimir/convertir a PDF. */
   printHtml: () => string;
-  /** Genera el .pptx como Blob (PowerPoint/Keynote/Google Slides). */
-  exportPptx: () => Promise<Blob>;
+  /** Abre (importa) un .html exportado por Lumen como nueva presentación editable. */
+  openHtml: (html: string) => Promise<string>;
   on: (event: 'change', cb: (doc: unknown) => void) => () => void;
 }
 
@@ -59,9 +60,17 @@ export function installBridge() {
     },
     present: (fromIndex) => useEditor.setState({ presenting: { start: fromIndex ?? currentSlideIndex() } }),
     stopPresenting: () => useEditor.setState({ presenting: null }),
-    exportHtml: () => buildStandaloneHtml(useEditor.getState().doc),
+    exportHtml: async (options) => (await exportHtml(useEditor.getState().doc, options)).html,
     printHtml: () => buildPrintHtml(useEditor.getState().doc),
-    exportPptx: async () => (await import('../../render/exportPptx')).buildPptx(useEditor.getState().doc),
+    openHtml: async (html) => {
+      const { importLumenHtml } = await import('./actions');
+      const { createDoc, openDoc, flushNow } = await import('./sync');
+      const doc = await importLumenHtml(html);
+      await flushNow();
+      const created = await createDoc('blank', doc.title, doc);
+      await openDoc(created.id);
+      return created.id;
+    },
     on: (_event, cb) => useEditor.subscribe((s, p) => s.doc !== p.doc && cb(s.doc)),
   };
   window.lumen = api;

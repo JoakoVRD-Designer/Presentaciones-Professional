@@ -41,6 +41,8 @@ interface EditorState {
   docsOpen: boolean;
   helpOpen: boolean;
   findOpen: boolean;
+  exportOpen: boolean;
+  videoOpen: boolean;
   historyOpen: boolean;
   liveAnimations: boolean;
   sounds: boolean;
@@ -115,6 +117,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   docsOpen: false,
   helpOpen: false,
   findOpen: false,
+  exportOpen: false,
+  videoOpen: false,
   historyOpen: false,
   liveAnimations: readPref('live', true),
   sounds: readPref('sounds', true),

@@ -1,6 +1,7 @@
 /** Acciones de alto nivel reutilizadas por la barra, la paleta de comandos y los atajos. */
 import { normalizePresentation, type ElementInput } from '../../core/model';
-import { buildStandaloneHtml, downloadFile, printDocument, slugify } from '../../render/exportHtml';
+import { downloadFile, parseLumenHtml, printDocument, slugify } from '../../render/exportHtml';
+import { mapMedia } from '../../core/media';
 import { currentSlideIndex, useEditor } from '../store/editor';
 import { mediaSize, pickFile, uploadAsset } from './assets';
 import { sfx } from './sound';
@@ -201,17 +202,10 @@ export function present(fromStart = false) {
   s.set({ presenting: { start: idx }, editingId: null });
 }
 
-export async function exportHtml() {
-  const s = st();
-  try {
-    s.toast('Generando HTML autónomo…');
-    const html = await buildStandaloneHtml(s.doc);
-    downloadFile(`${slugify(s.doc.title)}.html`, html);
-    sfx('success');
-    s.toast('HTML exportado. Ábrelo en cualquier navegador.', 'success');
-  } catch (err) {
-    s.toast(err instanceof Error ? err.message : 'Error al exportar', 'error');
-  }
+/** Abre el diálogo de exportación HTML. */
+export function exportHtml() {
+  sfx('open');
+  st().set({ exportOpen: true });
 }
 
 export function shareLink() {
@@ -232,21 +226,6 @@ export function shareLink() {
   return url;
 }
 
-export async function exportPptx() {
-  const s = st();
-  try {
-    s.toast('Generando PowerPoint… (los fondos animados se convierten en imagen)');
-    const { buildPptx } = await import('../../render/exportPptx');
-    const blob = await buildPptx(s.doc);
-    downloadFile(`${slugify(s.doc.title)}.pptx`, blob);
-    sfx('success');
-    s.toast('PowerPoint exportado: texto, formas, tablas y gráficos son editables.', 'success');
-  } catch (err) {
-    console.error(err);
-    s.toast(err instanceof Error ? `No se pudo exportar: ${err.message}` : 'Error al exportar', 'error');
-  }
-}
-
 export async function exportPdf() {
   const s = st();
   try {
@@ -263,18 +242,34 @@ export function exportJson() {
   sfx('success');
 }
 
+/** Convierte un .html de Lumen en documento, restaurando sus medios incrustados. */
+export async function importLumenHtml(text: string) {
+  const { doc, media } = parseLumenHtml(text);
+  const urls = new Map<string, string>();
+  const s = st();
+  for (const [id, m] of media) {
+    // Decodificación nativa del navegador (mucho más rápida que atob para videos grandes).
+    const blob = await (await fetch(`data:${m.mime};base64,${m.b64}`)).blob();
+    if (s.serverMode) {
+      const ext = m.mime.split('/')[1]?.replace('jpeg', 'jpg').replace('svg+xml', 'svg').replace('quicktime', 'mov').replace('mpeg', 'mp3') ?? 'bin';
+      urls.set(id, await uploadAsset(new File([blob], `${id}.${ext}`, { type: m.mime })));
+    } else if (m.mime.startsWith('image/') && blob.size < 8 * 1024 * 1024) {
+      urls.set(id, `data:${m.mime};base64,${m.b64}`);
+    } else {
+      urls.set(id, URL.createObjectURL(blob));
+    }
+  }
+  const parsed = normalizePresentation(doc);
+  return mapMedia(parsed, (url) => url.replace(/^lumen-media:([\w-]+)$/, (_m, id: string) => urls.get(id) ?? ''));
+}
+
 export async function importJson() {
-  const file = await pickFile('.json,application/json,.html');
+  const file = await pickFile('.html,text/html,.json,application/json');
   if (!file) return;
   const s = st();
   try {
-    let text = await file.text();
-    if (file.name.endsWith('.html')) {
-      const m = /<script type="application\/json" id="lumen-document">([\s\S]*?)<\/script>/.exec(text);
-      if (!m) throw new Error('Este HTML no fue exportado por Lumen');
-      text = m[1];
-    }
-    const doc = normalizePresentation(JSON.parse(text));
+    const text = await file.text();
+    const doc = file.name.toLowerCase().endsWith('.html') || /^\s*<!doctype html/i.test(text) ? await importLumenHtml(text) : normalizePresentation(JSON.parse(text));
     await flushNow();
     const created = await createDoc('blank', doc.title, doc);
     await openDoc(created.id);

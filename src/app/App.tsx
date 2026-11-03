@@ -5,6 +5,7 @@ import { AIPanel } from './components/AIPanel';
 import { Canvas } from './components/Canvas';
 import { CommandPalette } from './components/CommandPalette';
 import { DocsDialog } from './components/DocsDialog';
+import { ExportDialog } from './components/ExportDialog';
 import { FindDialog } from './components/FindDialog';
 import { HistoryDialog } from './components/HistoryDialog';
 import { HelpDialog } from './components/HelpDialog';
@@ -76,6 +77,7 @@ export function App() {
       <DocsDialog />
       <HelpDialog />
       <FindDialog />
+      <ExportDialog />
       <HistoryDialog />
       <PresentMode />
       <Toaster />

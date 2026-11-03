@@ -934,3 +934,15 @@ body.is-scrubbing, body.is-scrubbing * { cursor: ew-resize !important; user-sele
 .history-preview { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .history-thumbs { display: grid; grid-template-columns: repeat(3, 170px); gap: 10px; }
 .history-thumbs .thumb { border-radius: 8px; box-shadow: 0 0 0 1px var(--ui-border-strong); }
+
+/* ---------- Exportar ---------- */
+.export { display: flex; flex-direction: column; gap: 14px; }
+.export-hero { display: flex; gap: 16px; align-items: center; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, rgba(124, 92, 255, 0.14), rgba(34, 211, 238, 0.08)); border: 1px solid rgba(124, 92, 255, 0.3); }
+.export-hero p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; }
+.export-file { display: grid; place-items: center; gap: 2px; width: 64px; height: 76px; flex: none; border-radius: 10px; background: var(--ui-grad); color: #fff; font: 700 12px/1 'JetBrains Mono', monospace; box-shadow: 0 10px 30px rgba(124, 92, 255, 0.4); }
+.export-opts { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--ui-panel-2); border: 1px solid var(--ui-border); }
+.export-badge { align-self: flex-start; padding: 3px 9px; border-radius: 99px; background: rgba(245, 165, 36, 0.14); color: #f5c26b; font-size: 11.5px; font-weight: 600; }
+.export-badge.is-ok { background: rgba(52, 211, 153, 0.14); color: #6ee7b7; }
+.export-result { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: rgba(52, 211, 153, 0.08); border: 1px solid rgba(52, 211, 153, 0.3); }
+.export-warn { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; color: #f5c26b; font-size: 12px; }
+.export-actions { align-items: center; }

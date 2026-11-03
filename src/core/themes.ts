@@ -131,26 +131,33 @@ export const FONTS = [
   'JetBrains Mono',
 ] as const;
 
-export const GOOGLE_FONTS_URL =
-  'https://fonts.googleapis.com/css2?' +
-  [
-    'Inter:ital,wght@0,300..900;1,300..900',
-    'Sora:wght@300..800',
-    'Outfit:wght@300..900',
-    'Space+Grotesk:wght@300..700',
-    'Manrope:wght@300..800',
-    'Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800',
-    'Playfair+Display:ital,wght@0,400..900;1,400..900',
-    'DM+Serif+Display:ital@0;1',
-    'Fraunces:ital,wght@0,300..900;1,300..900',
-    'Instrument+Serif:ital@0;1',
-    'Bebas+Neue',
-    'Syne:wght@400..800',
-    'JetBrains+Mono:wght@300..700',
-  ]
-    .map((f) => `family=${f}`)
-    .join('&') +
-  '&display=swap';
+/** Ejes de cada familia en Google Fonts (css2). */
+export const FONT_SPECS: Record<string, string> = {
+  Inter: 'Inter:ital,wght@0,300..900;1,300..900',
+  Sora: 'Sora:wght@300..800',
+  Outfit: 'Outfit:wght@300..900',
+  'Space Grotesk': 'Space+Grotesk:wght@300..700',
+  Manrope: 'Manrope:wght@300..800',
+  'Plus Jakarta Sans': 'Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800',
+  'Playfair Display': 'Playfair+Display:ital,wght@0,400..900;1,400..900',
+  'DM Serif Display': 'DM+Serif+Display:ital@0;1',
+  Fraunces: 'Fraunces:ital,wght@0,300..900;1,300..900',
+  'Instrument Serif': 'Instrument+Serif:ital@0;1',
+  'Bebas Neue': 'Bebas+Neue',
+  Syne: 'Syne:wght@400..800',
+  'JetBrains Mono': 'JetBrains+Mono:ital,wght@0,300..700;1,300..700',
+};
+
+/** URL de Google Fonts para unas familias (opcionalmente solo con los caracteres indicados). */
+export function googleFontsUrl(families: string[] = Object.keys(FONT_SPECS), text?: string): string {
+  const specs = [...new Set(families)]
+    .filter((f) => FONT_SPECS[f])
+    .map((f) => `family=${FONT_SPECS[f]}`)
+    .join('&');
+  return `https://fonts.googleapis.com/css2?${specs}${text ? `&text=${encodeURIComponent(text)}` : ''}&display=swap`;
+}
+
+export const GOOGLE_FONTS_URL = googleFontsUrl();
 
 export function getTheme(id: string): Theme | undefined {
   return THEMES.find((t) => t.id === id);
